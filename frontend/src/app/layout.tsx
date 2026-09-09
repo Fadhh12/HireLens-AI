@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Fraunces, Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+import { Toaster } from "@/components/ui/sonner";
+
 // Headings — serif, editorial feel. Do NOT default to an all-sans-serif
 // generic SaaS look (UI/UX Flow §2.2).
 const fraunces = Fraunces({
@@ -39,6 +41,7 @@ export default function RootLayout({
         className={`${fraunces.variable} ${inter.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <Toaster position="top-right" />
       </body>
     </html>
   );
