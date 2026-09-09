@@ -104,12 +104,12 @@ App at `http://localhost:3000` — redirects to `/login`.
 
 ## Status
 
-Phase 1 of 6 done (auth + role-based access + user management). See
+Phase 2 of 6 done (job posting module). See
 `docs/HireLens-AI-Documentation.md` §Task Breakdown for the full plan.
 
 - [x] Phase 0 — repo scaffolding, design tokens, FastAPI + Next.js skeletons
 - [x] Phase 1 — auth (JWT, lockout), role guard, user management
-- [ ] Phase 2 — job posting module
+- [x] Phase 2 — job posting module (CRUD, weight validation, BR-2 lock)
 - [ ] Phase 3 — candidate intake + resume parsing
 - [ ] Phase 4 — matching engine + ranking dashboard
 - [ ] Phase 5 — interview assistant, comparison, export, activity log
