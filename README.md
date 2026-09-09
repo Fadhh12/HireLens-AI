@@ -91,6 +91,21 @@ after the first is created by an Admin via `POST /api/v1/users` (or the
 User Management screen once logged in). `scripts/create_admin.py` only
 exists to bootstrap that first account.
 
+### Background worker (candidate parsing, from Phase 3)
+
+Resume parsing runs async via Celery + Redis — never inline in the
+upload request.
+
+```bash
+cd backend
+celery -A app.workers.celery_app worker --loglevel=info --pool=solo   # --pool=solo is a Windows requirement
+```
+
+Needs Redis reachable at `REDIS_URL`. Redis has no official Windows
+build; see `backend/.redis-portable/README.md` for a no-admin-rights
+way to run it on Windows (or use WSL2 / a normal Linux box, where
+`redis-server` just works).
+
 ### Frontend
 
 ```bash
@@ -104,13 +119,13 @@ App at `http://localhost:3000` — redirects to `/login`.
 
 ## Status
 
-Phase 2 of 6 done (job posting module). See
+Phase 3 of 6 done (candidate intake + resume parsing). See
 `docs/HireLens-AI-Documentation.md` §Task Breakdown for the full plan.
 
 - [x] Phase 0 — repo scaffolding, design tokens, FastAPI + Next.js skeletons
 - [x] Phase 1 — auth (JWT, lockout), role guard, user management
 - [x] Phase 2 — job posting module (CRUD, weight validation, BR-2 lock)
-- [ ] Phase 3 — candidate intake + resume parsing
+- [x] Phase 3 — candidate intake, Supabase Storage, async resume parsing
 - [ ] Phase 4 — matching engine + ranking dashboard
 - [ ] Phase 5 — interview assistant, comparison, export, activity log
 - [ ] Phase 6 — polish, tests, deploy
