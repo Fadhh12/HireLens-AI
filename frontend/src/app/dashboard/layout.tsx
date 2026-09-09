@@ -21,7 +21,7 @@ interface NavItem {
 // product's shape is visible early, but marked "Segera" until their phase.
 const NAV_ITEMS: NavItem[] = [
   { label: "Ringkasan", href: "/dashboard", available: true },
-  { label: "Lowongan", href: "/dashboard/jobs", roles: ["admin", "recruiter"], available: false },
+  { label: "Lowongan", href: "/dashboard/jobs", roles: ["admin", "recruiter"], available: true },
   {
     label: "Kandidat",
     href: "/dashboard/candidates",
@@ -72,7 +72,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           <p className="font-heading text-base font-medium">HireLens AI</p>
         </div>
         {visibleItems.map((item) => {
-          const active = pathname === item.href;
+          const active =
+            item.href === "/dashboard" ? pathname === item.href : pathname.startsWith(item.href);
           if (!item.available) {
             return (
               <span
