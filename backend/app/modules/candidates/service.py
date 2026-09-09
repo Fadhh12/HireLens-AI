@@ -157,17 +157,26 @@ def update_candidate(db: Session, candidate_id: uuid.UUID, data: CandidateUpdate
 def update_status(
     db: Session, candidate_id: uuid.UUID, new_status: CandidateStatus, reason: str, actor: User
 ) -> Candidate:
-    """FR-7.2/BR-1: manual status change, always with a reason.
+    """FR-7.2/BR-1: manual status change, always with a reason. FR-7.3:
+    recorded to the activity log (old -> new status; `reason` itself isn't
+    a logged column per SDD §3.1's activity_logs shape, so it rides along
+    as a suffix on new_value instead of being dropped)."""
+    from app.modules.activity_log.service import log_activity
 
-    `reason` isn't persisted anywhere yet — FR-7.3's "must be recorded in
-    an activity log" needs the activity_logs table, which is explicitly
-    Phase 5 scope (Task Breakdown 5.7). Taking `actor` now so that table
-    lands without having to touch this function's signature again.
-    """
     candidate = get_candidate(db, candidate_id)
+    old_status = candidate.status.value
     candidate.status = new_status
     db.commit()
     db.refresh(candidate)
+
+    log_activity(
+        db,
+        actor_id=actor.id,
+        action="status_changed",
+        candidate_id=candidate.id,
+        old_value=old_status,
+        new_value=f"{new_status.value} (alasan: {reason})",
+    )
     return candidate
 
 

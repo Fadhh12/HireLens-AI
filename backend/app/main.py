@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
+from app.modules.activity_log.router import router as activity_log_router
 from app.modules.auth.router import router as auth_router
 from app.modules.auth.router import users_router
 from app.modules.candidates.router import router as candidates_router
@@ -40,3 +41,4 @@ app.include_router(users_router, prefix=api_prefix)
 app.include_router(jobs_router, prefix=api_prefix)
 app.include_router(candidates_router, prefix=api_prefix)
 app.include_router(interview_router, prefix=api_prefix)
+app.include_router(activity_log_router, prefix=api_prefix)

@@ -4,6 +4,7 @@ import json
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import Response
 from pydantic import ValidationError
 
 from app.core.dependencies import get_current_user, require_role
@@ -23,6 +24,7 @@ from app.modules.jobs.model import JobStatus
 from app.modules.jobs.service import get_job
 from app.modules.matching_engine import service as matching_service
 from app.modules.matching_engine.schema import CandidateScoreOut
+from app.modules.candidates.report import build_candidate_report_pdf
 from app.workers.tasks_parsing import parse_candidate_documents
 from app.workers.tasks_scoring import compute_candidate_score
 from sqlalchemy.orm import Session
@@ -115,6 +117,29 @@ def list_candidates(
     # FR-6.1: default sort highest score first; unscored candidates last.
     items.sort(key=lambda i: (i.final_score is None, -(i.final_score or 0)))
     return items
+
+
+@router.get("/candidates/{candidate_id}/report/pdf")
+def export_candidate_report(
+    candidate_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> Response:
+    """FR-9.1/9.2: candidate summary + score as PDF, disclaimer included."""
+    candidate = service.get_candidate(db, candidate_id)
+    job = get_job(db, candidate.job_posting_id)
+    try:
+        score = matching_service.get_latest_score(db, candidate_id)
+    except HTTPException:
+        score = None
+
+    pdf_bytes = build_candidate_report_pdf(candidate, job, score)
+    filename = f"laporan-{candidate.full_name.replace(' ', '-').lower()}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/candidates/{candidate_id}", response_model=CandidateOut)

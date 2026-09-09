@@ -1,6 +1,6 @@
-"""Celery app instance — parsing (Phase 3) and scoring (Phase 4) run here,
-never inline in a request handler (brief §7: never call LLM/parsing
-synchronously)."""
+"""Celery app instance — parsing (Phase 3), scoring (Phase 4), and
+interview guide generation (Phase 5) run here, never inline in a
+request handler (brief §7: never call LLM/parsing synchronously)."""
 
 from celery import Celery
 
@@ -15,6 +15,8 @@ from app.modules.auth import model as _auth_model  # noqa: F401
 from app.modules.jobs import model as _jobs_model  # noqa: F401
 from app.modules.candidates import model as _candidates_model  # noqa: F401
 from app.modules.matching_engine import model as _matching_engine_model  # noqa: F401
+from app.modules.interview import model as _interview_model  # noqa: F401
+from app.modules.activity_log import model as _activity_log_model  # noqa: F401
 
 settings = get_settings()
 
@@ -22,7 +24,7 @@ celery_app = Celery(
     "hirelens",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["app.workers.tasks_parsing", "app.workers.tasks_scoring"],
+    include=["app.workers.tasks_parsing", "app.workers.tasks_scoring", "app.workers.tasks_interview"],
 )
 
 celery_app.conf.update(

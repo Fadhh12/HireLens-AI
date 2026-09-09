@@ -15,6 +15,8 @@ from app.modules.auth import model as _auth_model  # noqa: F401
 from app.modules.jobs import model as _jobs_model  # noqa: F401
 from app.modules.candidates import model as _candidates_model  # noqa: F401
 from app.modules.matching_engine import model as _matching_engine_model  # noqa: F401
+from app.modules.interview import model as _interview_model  # noqa: F401
+from app.modules.activity_log import model as _activity_log_model  # noqa: F401
 
 
 @pytest.fixture()
@@ -97,3 +99,17 @@ def mock_llm(monkeypatch: pytest.MonkeyPatch):
     """Scoring tests shouldn't hit the real Gemini API — simulate it being
     unavailable, which is also the FR-5.5/SRS §7 fallback path."""
     monkeypatch.setattr("app.modules.matching_engine.llm_assist.get_llm", lambda: None)
+
+
+@pytest.fixture()
+def mock_question_generator(monkeypatch: pytest.MonkeyPatch):
+    """Interview guide tests shouldn't hit the real Gemini API."""
+
+    def _fake_generate(candidate, job, score_breakdown):
+        return {
+            "technical_questions": ["Q1 teknikal", "Q2 teknikal", "Q3 teknikal"],
+            "behavioral_questions": ["Q1 behavioral", "Q2 behavioral", "Q3 behavioral"],
+            "risk_areas": ["Area risiko 1"],
+        }
+
+    monkeypatch.setattr("app.modules.interview.service.generate_interview_guide", _fake_generate)
