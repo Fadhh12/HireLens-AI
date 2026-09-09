@@ -1,4 +1,5 @@
-import { apiFetch } from "@/lib/api/client";
+import { apiFetch, ApiError } from "@/lib/api/client";
+import { useAuthStore } from "@/lib/auth/store";
 
 import type { Candidate, CandidateCreateResponse, CandidateListItem, CandidateStatus } from "./types";
 
@@ -50,4 +51,24 @@ export function updateCandidate(
 
 export function updateCandidateStatus(id: string, status: CandidateStatus, reason: string): Promise<Candidate> {
   return apiFetch<Candidate>(`/candidates/${id}/status`, { method: "PATCH", body: { status, reason } });
+}
+
+/** FR-9: PDF isn't JSON, so this bypasses apiFetch and handles the
+ * Authorization header + blob response directly. */
+export async function downloadCandidateReportPdf(id: string, filename: string): Promise<void> {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+  const token = useAuthStore.getState().accessToken;
+  const res = await fetch(`${API_URL}/candidates/${id}/report/pdf`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, "Gagal mengekspor laporan PDF");
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }

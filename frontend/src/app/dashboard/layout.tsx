@@ -28,7 +28,7 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "recruiter", "hiring_manager"],
     available: false,
   },
-  { label: "Log Aktivitas", href: "/dashboard/activity", roles: ["admin"], available: false },
+  { label: "Log Aktivitas", href: "/dashboard/activity", roles: ["admin"], available: true },
   { label: "Manajemen User", href: "/dashboard/users", roles: ["admin"], available: true },
 ];
 

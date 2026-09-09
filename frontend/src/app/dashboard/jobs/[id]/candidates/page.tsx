@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { RequireAuth } from "@/components/require-auth";
@@ -64,6 +64,7 @@ export default function RankingDashboardPage() {
 
 function RankingDashboardContent() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const [job, setJob] = useState<JobPosting | null>(null);
   const [candidates, setCandidates] = useState<CandidateListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +74,13 @@ function RankingDashboardContent() {
   const [statusFilter, setStatusFilter] = useState<CandidateStatus | "all">("all");
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("score_desc");
+  const [selected, setSelected] = useState<string[]>([]);
+
+  function toggleSelect(id: string) {
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : prev.length < 3 ? [...prev, id] : prev
+    );
+  }
 
   useEffect(() => {
     Promise.all([getJob(params.id), listCandidates(params.id)])
@@ -124,10 +132,21 @@ function RankingDashboardContent() {
           <h1>{job.title}</h1>
           <p className="caption">{candidates.length} kandidat total</p>
         </div>
-        <Button
-          render={<Link href={`/dashboard/jobs/${job.id}/candidates/new`}>+ Tambah Kandidat</Link>}
-          nativeButton={false}
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            disabled={selected.length < 2}
+            onClick={() =>
+              router.push(`/dashboard/jobs/${job.id}/candidates/compare?ids=${selected.join(",")}`)
+            }
+          >
+            Bandingkan ({selected.length})
+          </Button>
+          <Button
+            render={<Link href={`/dashboard/jobs/${job.id}/candidates/new`}>+ Tambah Kandidat</Link>}
+            nativeButton={false}
+          />
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -179,6 +198,7 @@ function RankingDashboardContent() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-8"></TableHead>
               <TableHead>Kandidat</TableHead>
               <TableHead>Skor</TableHead>
               <TableHead>Label</TableHead>
@@ -190,13 +210,22 @@ function RankingDashboardContent() {
           <TableBody>
             {visible.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-ink-400 text-center">
+                <TableCell colSpan={7} className="text-ink-400 text-center">
                   {candidates.length === 0 ? "Belum ada kandidat untuk job ini." : "Tidak ada kandidat yang cocok dengan filter."}
                 </TableCell>
               </TableRow>
             )}
             {visible.map((c) => (
               <TableRow key={c.id} className="hover:bg-accent">
+                <TableCell>
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(c.id)}
+                    onChange={() => toggleSelect(c.id)}
+                    disabled={!selected.includes(c.id) && selected.length >= 3}
+                    aria-label={`Pilih ${c.full_name} untuk dibandingkan`}
+                  />
+                </TableCell>
                 <TableCell className="font-medium">{c.full_name}</TableCell>
                 <TableCell className="tabular-score">
                   {c.final_score !== null ? c.final_score.toFixed(1) : <span className="text-ink-400 animate-pulse">Memproses...</span>}

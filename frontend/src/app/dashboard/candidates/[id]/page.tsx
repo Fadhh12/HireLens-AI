@@ -4,6 +4,8 @@ import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import Link from "next/link";
+
 import { RequireAuth } from "@/components/require-auth";
 import { MatchLabelBadge } from "@/components/candidates/match-label-badge";
 import { ScoreBreakdownBar } from "@/components/candidates/score-breakdown-bar";
@@ -20,10 +22,18 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api/client";
-import { getCandidate, updateCandidate, updateCandidateStatus } from "@/lib/candidates/api";
+import {
+  downloadCandidateReportPdf,
+  getCandidate,
+  updateCandidate,
+  updateCandidateStatus,
+} from "@/lib/candidates/api";
 import type { Candidate, CandidateStatus } from "@/lib/candidates/types";
 import { getCandidateScore } from "@/lib/matching/api";
 import type { CandidateScore } from "@/lib/matching/types";
+
+// UI/UX Layar 7: Interview Guide tab appears once shortlisted+.
+const INTERVIEW_GUIDE_ELIGIBLE: CandidateStatus[] = ["shortlisted", "interviewed", "hired", "rejected"];
 
 const STATUS_LABEL: Record<CandidateStatus, string> = {
   new: "Baru",
@@ -148,6 +158,25 @@ function CandidateDetailContent() {
           ) : (
             <Badge className={STATUS_BADGE[candidate.status]}>{STATUS_LABEL[candidate.status]}</Badge>
           )}
+          {INTERVIEW_GUIDE_ELIGIBLE.includes(candidate.status) && (
+            <Button
+              variant="outline"
+              size="sm"
+              render={<Link href={`/dashboard/candidates/${candidate.id}/interview`}>Interview Guide</Link>}
+              nativeButton={false}
+            />
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              downloadCandidateReportPdf(candidate.id, `laporan-${candidate.full_name}.pdf`).catch(() =>
+                toast.error("Gagal mengekspor laporan PDF")
+              )
+            }
+          >
+            Export PDF
+          </Button>
         </div>
       </div>
 
