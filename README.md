@@ -74,24 +74,46 @@ python -m venv .venv
 .venv\Scripts\activate        # Windows; use `source .venv/bin/activate` on macOS/Linux
 pip install -r requirements.txt
 copy .env.example .env        # then fill in DATABASE_URL, SUPABASE_URL, SUPABASE_KEY, GOOGLE_API_KEY, JWT_SECRET_KEY
+alembic upgrade head           # creates the schema in your Supabase DB
+python scripts/create_admin.py --name "Your Name" --email you@example.com --password "ChangeMe123"
 uvicorn app.main:app --reload
 ```
 
+> **DATABASE_URL note:** use Supabase's **Session pooler** connection string
+> (`postgres.<project-ref>@aws-0-<region>.pooler.supabase.com:5432`), not
+> "Direct connection" — the direct host is IPv6-only and fails to resolve
+> on many networks.
+
 API docs at `http://localhost:8000/docs`, health check at `http://localhost:8000/health`.
+
+There's no self-register endpoint by design (FR-1.5) — every account
+after the first is created by an Admin via `POST /api/v1/users` (or the
+User Management screen once logged in). `scripts/create_admin.py` only
+exists to bootstrap that first account.
 
 ### Frontend
 
 ```bash
 cd frontend
 npm install
+copy .env.example .env.local   # NEXT_PUBLIC_API_URL, defaults to the local backend above
 npm run dev
 ```
 
-App at `http://localhost:3000`.
+App at `http://localhost:3000` — redirects to `/login`.
 
 ## Status
 
-Early scaffolding (Phase 0 of the build order in `docs/HireLens-AI-Documentation.md` §Task Breakdown). See that file for the full 0–6 phase plan.
+Phase 1 of 6 done (auth + role-based access + user management). See
+`docs/HireLens-AI-Documentation.md` §Task Breakdown for the full plan.
+
+- [x] Phase 0 — repo scaffolding, design tokens, FastAPI + Next.js skeletons
+- [x] Phase 1 — auth (JWT, lockout), role guard, user management
+- [ ] Phase 2 — job posting module
+- [ ] Phase 3 — candidate intake + resume parsing
+- [ ] Phase 4 — matching engine + ranking dashboard
+- [ ] Phase 5 — interview assistant, comparison, export, activity log
+- [ ] Phase 6 — polish, tests, deploy
 
 ## License
 
