@@ -68,16 +68,20 @@ interface ApiFetchOptions extends Omit<RequestInit, "body"> {
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const { body, skipAuth, headers, ...rest } = options;
 
+  const isFormData = body instanceof FormData;
+
   const doFetch = async (): Promise<Response> => {
     const token = useAuthStore.getState().accessToken;
     return fetch(`${API_URL}${path}`, {
       ...rest,
       headers: {
-        "Content-Type": "application/json",
+        // Skip Content-Type for FormData — the browser must set it itself
+        // (multipart/form-data with the right boundary).
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
         ...(!skipAuth && token ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: isFormData ? (body as FormData) : body !== undefined ? JSON.stringify(body) : undefined,
     });
   };
 
