@@ -12,6 +12,7 @@ from app.main import app
 
 # Import every model so Base.metadata knows about their tables.
 from app.modules.auth import model as _auth_model  # noqa: F401
+from app.modules.jobs import model as _jobs_model  # noqa: F401
 
 
 @pytest.fixture()

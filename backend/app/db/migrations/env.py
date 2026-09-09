@@ -18,7 +18,7 @@ from app.db.base import Base  # noqa: E402
 # Import every module's model so Base.metadata sees all tables before
 # autogenerate runs. Uncomment as each model.py is implemented (Phase 2+).
 from app.modules.auth import model as auth_model  # noqa: F401, E402
-# from app.modules.jobs import model as jobs_model  # noqa: F401
+from app.modules.jobs import model as jobs_model  # noqa: F401, E402
 # from app.modules.candidates import model as candidates_model  # noqa: F401
 
 # this is the Alembic Config object, which provides
