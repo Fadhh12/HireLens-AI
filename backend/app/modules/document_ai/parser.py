@@ -20,6 +20,7 @@ tables, non-Latin scripts).
 import io
 import re
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
 import fitz  # PyMuPDF
 import pdfplumber
@@ -136,6 +137,7 @@ class ParsedProfile:
     experience: Field
     skills: Field
     certifications: Field
+    experience_years: Field
     raw_text_length: int = 0
     warnings: list[str] = field(default_factory=list)
 
@@ -148,6 +150,10 @@ class ParsedProfile:
             "experience": {"value": self.experience.value, "verified": self.experience.verified},
             "skills": {"value": self.skills.value, "verified": self.skills.verified},
             "certifications": {"value": self.certifications.value, "verified": self.certifications.verified},
+            "experience_years": {
+                "value": self.experience_years.value,
+                "verified": self.experience_years.verified,
+            },
             "raw_text_length": self.raw_text_length,
             "warnings": self.warnings,
         }
@@ -236,6 +242,32 @@ def _extract_list_section(section_text: str | None) -> Field:
     return Field(value=entries, verified=False)
 
 
+_YEAR_RANGE_RE = re.compile(
+    r"(19|20)\d{2}\s*[-–—]\s*((?:19|20)\d{2}|present|sekarang|now|current)", re.IGNORECASE
+)
+
+
+def _estimate_experience_years(experience_section_text: str | None, current_year: int | None = None) -> Field:
+    """Sums the span of every "YYYY-YYYY" / "YYYY-Present" style range found
+    in the experience section (Matching Engine's Experience Fit needs a
+    number, and nothing upstream produces one). Heuristic, not exact:
+    overlapping roles double-count, and a CV that doesn't spell out years
+    in this shape yields 0 — always `verified: false`, recruiter can
+    override on the candidate detail page."""
+    if not experience_section_text:
+        return Field(value=0.0, verified=False)
+
+    year = current_year or datetime.now(timezone.utc).year
+    total = 0.0
+    for match in _YEAR_RANGE_RE.finditer(experience_section_text):
+        start = int(match.group(0)[:4])
+        end_raw = match.group(2).lower()
+        end = year if end_raw in {"present", "sekarang", "now", "current"} else int(end_raw)
+        if end >= start:
+            total += end - start
+    return Field(value=round(total, 1), verified=False)
+
+
 def parse_resume(content: bytes, filename: str) -> ParsedProfile:
     text = extract_text(content, filename)
 
@@ -258,6 +290,7 @@ def parse_resume(content: bytes, filename: str) -> ParsedProfile:
         experience=_extract_list_section(experience_block),
         skills=_extract_skills(text, skills_block),
         certifications=_extract_list_section(certifications_block),
+        experience_years=_estimate_experience_years(experience_block),
         raw_text_length=len(text),
         warnings=warnings,
     )

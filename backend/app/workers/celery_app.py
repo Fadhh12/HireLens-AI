@@ -14,6 +14,7 @@ from app.core.config import get_settings
 from app.modules.auth import model as _auth_model  # noqa: F401
 from app.modules.jobs import model as _jobs_model  # noqa: F401
 from app.modules.candidates import model as _candidates_model  # noqa: F401
+from app.modules.matching_engine import model as _matching_engine_model  # noqa: F401
 
 settings = get_settings()
 

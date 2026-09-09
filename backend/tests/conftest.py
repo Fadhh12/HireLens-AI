@@ -14,6 +14,7 @@ from app.main import app
 from app.modules.auth import model as _auth_model  # noqa: F401
 from app.modules.jobs import model as _jobs_model  # noqa: F401
 from app.modules.candidates import model as _candidates_model  # noqa: F401
+from app.modules.matching_engine import model as _matching_engine_model  # noqa: F401
 
 
 @pytest.fixture()
@@ -75,3 +76,24 @@ def mock_parse_task(monkeypatch: pytest.MonkeyPatch):
 
     monkeypatch.setattr("app.modules.candidates.router.parse_candidate_documents", _FakeDelay)
     return calls
+
+
+@pytest.fixture()
+def mock_score_task(monkeypatch: pytest.MonkeyPatch):
+    """Candidate/score tests shouldn't need a real Celery broker either."""
+    calls: list[str] = []
+
+    class _FakeDelay:
+        @staticmethod
+        def delay(candidate_id: str) -> None:
+            calls.append(candidate_id)
+
+    monkeypatch.setattr("app.modules.candidates.router.compute_candidate_score", _FakeDelay)
+    return calls
+
+
+@pytest.fixture()
+def mock_llm(monkeypatch: pytest.MonkeyPatch):
+    """Scoring tests shouldn't hit the real Gemini API — simulate it being
+    unavailable, which is also the FR-5.5/SRS §7 fallback path."""
+    monkeypatch.setattr("app.modules.matching_engine.llm_assist.get_llm", lambda: None)

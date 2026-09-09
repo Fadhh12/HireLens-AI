@@ -42,6 +42,31 @@ def _pdf_bytes() -> bytes:
     return data
 
 
+def test_intake_candidate_persists_assessment_input(client, db_session, mock_storage, mock_parse_task):
+    """Regression test: assessment_input (FR-3.3) was collected by the intake
+    form but never reached the backend — the form field was missing from
+    the endpoint signature and the frontend never appended it either."""
+    import json
+
+    token = _admin_token(client, db_session)
+    job = _make_job(db_session, status=JobStatus.active)
+
+    assessment = {"mbti": "INTJ", "competency_scores": {"communication": 4, "leadership": 3}}
+    resp = client.post(
+        f"/api/v1/jobs/{job.id}/candidates",
+        headers={"Authorization": f"Bearer {token}"},
+        data={
+            "full_name": "Test Candidate",
+            "email": "test.candidate@example.com",
+            "phone": "0812345678",
+            "assessment_input": json.dumps(assessment),
+        },
+        files={"cv_file": ("cv.pdf", io.BytesIO(_pdf_bytes()), "application/pdf")},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["assessment_input"] == assessment
+
+
 def test_intake_candidate_success(client, db_session, mock_storage, mock_parse_task):
     token = _admin_token(client, db_session)
     job = _make_job(db_session, status=JobStatus.active)
@@ -189,3 +214,59 @@ def test_update_candidate_manual_correction(client, db_session, mock_storage, mo
     )
     assert patch_resp.status_code == 200
     assert patch_resp.json()["full_name"] == "Corrected Name"
+
+
+def test_update_status_requires_reason(client, db_session, mock_storage, mock_parse_task):
+    token = _admin_token(client, db_session)
+    job = _make_job(db_session, status=JobStatus.active)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    create_resp = client.post(
+        f"/api/v1/jobs/{job.id}/candidates",
+        headers=headers,
+        data={"full_name": "X", "email": "x@example.com", "phone": "0812345678"},
+        files={"cv_file": ("cv.pdf", io.BytesIO(_pdf_bytes()), "application/pdf")},
+    )
+    candidate_id = create_resp.json()["id"]
+
+    missing_reason = client.patch(
+        f"/api/v1/candidates/{candidate_id}/status", headers=headers, json={"status": "shortlisted"}
+    )
+    assert missing_reason.status_code == 422
+
+    ok = client.patch(
+        f"/api/v1/candidates/{candidate_id}/status",
+        headers=headers,
+        json={"status": "shortlisted", "reason": "Skill match kuat"},
+    )
+    assert ok.status_code == 200
+    assert ok.json()["status"] == "shortlisted"
+
+
+def test_update_status_allows_backward_transition_with_reason(client, db_session, mock_storage, mock_parse_task):
+    """BR-1: the system never regresses a status on its own, but a human
+    can — as long as they say why."""
+    token = _admin_token(client, db_session)
+    job = _make_job(db_session, status=JobStatus.active)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    create_resp = client.post(
+        f"/api/v1/jobs/{job.id}/candidates",
+        headers=headers,
+        data={"full_name": "X", "email": "x@example.com", "phone": "0812345678"},
+        files={"cv_file": ("cv.pdf", io.BytesIO(_pdf_bytes()), "application/pdf")},
+    )
+    candidate_id = create_resp.json()["id"]
+
+    client.patch(
+        f"/api/v1/candidates/{candidate_id}/status",
+        headers=headers,
+        json={"status": "hired", "reason": "Diterima"},
+    )
+    backward = client.patch(
+        f"/api/v1/candidates/{candidate_id}/status",
+        headers=headers,
+        json={"status": "new", "reason": "Salah input, batal hire"},
+    )
+    assert backward.status_code == 200
+    assert backward.json()["status"] == "new"

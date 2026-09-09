@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 @celery_app.task(name="parse_candidate_documents", bind=True, max_retries=0)
 def parse_candidate_documents(self, candidate_id: str) -> None:
     from app.modules.document_ai.service import parse_candidate_cv
+    from app.workers.tasks_scoring import compute_candidate_score
 
     db = SessionLocal()
     try:
@@ -29,8 +30,13 @@ def parse_candidate_documents(self, candidate_id: str) -> None:
             # download error) gets the same safe fallback.
             logger.warning("CV parsing failed for candidate %s: %s", candidate_id, exc)
             candidates_service.mark_needs_manual_review(db, candidate_id, reason=str(exc))
-            return
-
-        candidates_service.apply_parsed_profile(db, candidate_id, profile)
+        else:
+            candidates_service.apply_parsed_profile(db, candidate_id, profile)
     finally:
         db.close()
+
+    # Chained regardless of parse outcome — PRD's "upload -> muncul di
+    # ranking < 30 detik" metric implies a score should exist right after
+    # intake even if parsing came up empty (skill_fit just scores low,
+    # which is itself informative rather than leaving no score row at all).
+    compute_candidate_score.delay(candidate_id)

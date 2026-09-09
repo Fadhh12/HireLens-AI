@@ -4,7 +4,7 @@ import re
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.modules.candidates.model import CandidateStatus
 
@@ -54,6 +54,15 @@ class CandidateUpdate(BaseModel):
         return validate_phone(v) if v is not None else v
 
 
+class CandidateStatusUpdate(BaseModel):
+    """FR-7.2 + BR-1: status changes are always manual and always carry a
+    reason — including backward ones (the system itself never regresses a
+    status automatically; a human can, but has to say why)."""
+
+    status: CandidateStatus
+    reason: str = Field(min_length=1, max_length=500)
+
+
 class CandidateOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -72,3 +81,12 @@ class CandidateOut(BaseModel):
 
 class CandidateCreateResponse(CandidateOut):
     duplicate_warning: bool = False
+
+
+class CandidateListItemOut(CandidateOut):
+    """Candidate + its latest score, denormalized for the Ranking Dashboard
+    (FR-6.1) so it doesn't need one request per row."""
+
+    final_score: float | None = None
+    label: str | None = None
+    score_computed_at: datetime | None = None

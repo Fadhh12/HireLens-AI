@@ -1,8 +1,9 @@
-"""Candidate business logic: intake, storage upload, manual correction.
+"""Candidate business logic: intake, storage upload, manual correction,
+status transitions (FR-7.2, BR-1).
 
-Status transitions beyond intake (BR-1's shortlist/hire/reject flow with
-mandatory reason + activity log) are Phase 4/5 scope (Candidate Detail
-screen, activity log) — not implemented here.
+The activity-log audit trail for status changes (FR-7.3) is Phase 5
+scope (Task Breakdown 5.7, needs the `activity_logs` table) — not
+implemented here yet.
 """
 
 import uuid
@@ -12,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.storage import delete_files, upload_file
+from app.modules.auth.model import User
 from app.modules.candidates.model import Candidate, CandidateStatus
 from app.modules.candidates.schema import CandidateUpdate
 from app.modules.document_ai.parser import ParsedProfile
@@ -83,6 +85,7 @@ async def create_candidate(
     phone: str,
     cv_file: UploadFile,
     certificate_files: list[UploadFile],
+    assessment_input: dict | None = None,
 ) -> tuple[Candidate, bool]:
     if len(certificate_files) > MAX_CERTIFICATE_FILES:
         raise HTTPException(
@@ -115,6 +118,7 @@ async def create_candidate(
         phone=phone,
         cv_file_url=cv_path,
         certificate_urls=certificate_paths,
+        assessment_input=assessment_input,
         status=CandidateStatus.new,
     )
     db.add(candidate)
@@ -145,6 +149,23 @@ def update_candidate(db: Session, candidate_id: uuid.UUID, data: CandidateUpdate
     candidate = get_candidate(db, candidate_id)
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(candidate, field, value)
+    db.commit()
+    db.refresh(candidate)
+    return candidate
+
+
+def update_status(
+    db: Session, candidate_id: uuid.UUID, new_status: CandidateStatus, reason: str, actor: User
+) -> Candidate:
+    """FR-7.2/BR-1: manual status change, always with a reason.
+
+    `reason` isn't persisted anywhere yet — FR-7.3's "must be recorded in
+    an activity log" needs the activity_logs table, which is explicitly
+    Phase 5 scope (Task Breakdown 5.7). Taking `actor` now so that table
+    lands without having to touch this function's signature again.
+    """
+    candidate = get_candidate(db, candidate_id)
+    candidate.status = new_status
     db.commit()
     db.refresh(candidate)
     return candidate
