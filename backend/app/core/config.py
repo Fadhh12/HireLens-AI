@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     llm_provider: Literal["gemini", "openai"] = "gemini"
     google_api_key: str = ""
     openai_api_key: str = ""
-    llm_model_name: str = "gemini-1.5-flash"
+    llm_model_name: str = "gemini-3.5-flash"
 
     # --- CORS ---
     cors_origins: str = "http://localhost:3000"
