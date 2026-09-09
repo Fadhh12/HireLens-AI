@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.modules.auth.router import router as auth_router
+from app.modules.auth.router import users_router
 from app.modules.candidates.router import router as candidates_router
 from app.modules.interview.router import router as interview_router
 from app.modules.jobs.router import router as jobs_router
@@ -35,6 +36,7 @@ def health() -> dict[str, str]:
 
 api_prefix = settings.api_v1_prefix
 app.include_router(auth_router, prefix=api_prefix)
+app.include_router(users_router, prefix=api_prefix)
 app.include_router(jobs_router, prefix=api_prefix)
 app.include_router(candidates_router, prefix=api_prefix)
 app.include_router(interview_router, prefix=api_prefix)
