@@ -1,0 +1,3 @@
+"""Celery task: run matching_engine scoring for one candidate. Phase 4."""
+
+# TODO(Phase 4): @celery_app.task def compute_candidate_score(candidate_id: str): ...

@@ -1,0 +1,3 @@
+"""Celery task: run document_ai parsing for one candidate. Phase 3."""
+
+# TODO(Phase 3): @celery_app.task def parse_candidate_documents(candidate_id: str): ...

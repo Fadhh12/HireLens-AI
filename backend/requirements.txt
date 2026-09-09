@@ -1,0 +1,42 @@
+# --- Web framework ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+python-multipart==0.0.20
+
+# --- Database ---
+sqlalchemy==2.0.36
+alembic==1.14.0
+psycopg2-binary==2.9.10
+
+# --- Auth / security ---
+passlib[bcrypt]==1.7.4
+pyjwt==2.10.1
+
+# --- Object storage (Supabase) ---
+supabase==2.11.0
+
+# --- Background jobs ---
+celery==5.4.0
+redis==5.2.1
+
+# --- Resume parsing ---
+pymupdf==1.25.1
+pdfplumber==0.11.4
+python-docx==1.1.2
+spacy==3.8.3
+
+# --- Generative AI ---
+# Provider is Gemini for this project (see app/modules/matching_engine/llm_assist.py
+# for the swappable interface — add langchain-openai here too if switching providers).
+langchain==0.3.13
+langchain-google-genai==2.0.7
+
+# --- Testing ---
+pytest==8.3.4
+pytest-asyncio==0.25.0
+httpx==0.28.1
+
+# --- Utilities ---
+python-dotenv==1.0.1
