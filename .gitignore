@@ -46,3 +46,9 @@ npm-debug.log*
 
 # --- Celery ---
 backend/celerybeat-schedule
+
+# --- Portable Redis (dev-only, see backend/.redis-portable/README.md) ---
+# Everything from the tporadowski/redis zip release is gitignored (third-
+# party redistributable binaries/configs, not source) except our own README.
+backend/.redis-portable/*
+!backend/.redis-portable/README.md

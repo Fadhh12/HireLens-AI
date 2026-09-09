@@ -18,17 +18,23 @@ bcrypt==5.0.0
 pyjwt==2.10.1
 
 # --- Object storage (Supabase) ---
-supabase==2.11.0
+# 2.11.0's client only accepted legacy JWT-format keys and rejected
+# Supabase's newer sb_secret_/sb_publishable_ key format outright.
+supabase==2.31.0
 
 # --- Background jobs ---
 celery==5.4.0
 redis==5.2.1
 
 # --- Resume parsing ---
+# Docs list "spaCy/regex" for entity extraction (either, not both) — the
+# regex + section-heuristic parser in document_ai/parser.py tested well
+# on real-shaped sample CVs and is deterministic/easy to unit test, so
+# spaCy (a much heavier dependency) wasn't added. Worth revisiting if
+# accuracy on messier real CVs turns out to need it.
 pymupdf==1.25.1
 pdfplumber==0.11.4
 python-docx==1.1.2
-spacy==3.8.3
 
 # --- Generative AI ---
 # Provider is Gemini for this project (see app/modules/matching_engine/llm_assist.py

@@ -13,6 +13,7 @@ from app.main import app
 # Import every model so Base.metadata knows about their tables.
 from app.modules.auth import model as _auth_model  # noqa: F401
 from app.modules.jobs import model as _jobs_model  # noqa: F401
+from app.modules.candidates import model as _candidates_model  # noqa: F401
 
 
 @pytest.fixture()
@@ -46,3 +47,31 @@ def client(db_session: Session):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def mock_storage(monkeypatch: pytest.MonkeyPatch):
+    """Candidate intake tests shouldn't hit the real Supabase bucket."""
+    uploaded: list[tuple[str, bytes, str]] = []
+
+    def _fake_upload(path: str, content: bytes, content_type: str) -> str:
+        uploaded.append((path, content, content_type))
+        return path
+
+    monkeypatch.setattr("app.modules.candidates.service.upload_file", _fake_upload)
+    monkeypatch.setattr("app.modules.candidates.service.delete_files", lambda paths: None)
+    return uploaded
+
+
+@pytest.fixture()
+def mock_parse_task(monkeypatch: pytest.MonkeyPatch):
+    """Candidate intake tests shouldn't need a real Celery broker."""
+    calls: list[str] = []
+
+    class _FakeDelay:
+        @staticmethod
+        def delay(candidate_id: str) -> None:
+            calls.append(candidate_id)
+
+    monkeypatch.setattr("app.modules.candidates.router.parse_candidate_documents", _FakeDelay)
+    return calls

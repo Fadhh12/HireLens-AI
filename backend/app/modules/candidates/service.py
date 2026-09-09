@@ -1,3 +1,173 @@
-"""Candidate business logic: intake, status transitions (BR-1), duplicate-email warning (SRS §7). Phase 3."""
+"""Candidate business logic: intake, storage upload, manual correction.
 
-# TODO(Phase 3)
+Status transitions beyond intake (BR-1's shortlist/hire/reject flow with
+mandatory reason + activity log) are Phase 4/5 scope (Candidate Detail
+screen, activity log) — not implemented here.
+"""
+
+import uuid
+
+from fastapi import HTTPException, UploadFile, status as http_status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.core.storage import delete_files, upload_file
+from app.modules.candidates.model import Candidate, CandidateStatus
+from app.modules.candidates.schema import CandidateUpdate
+from app.modules.document_ai.parser import ParsedProfile
+
+# --- SRS §4 validation constants ---
+MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
+MAX_CERTIFICATE_FILES = 5
+
+CV_ALLOWED_EXTENSIONS = {"pdf", "docx"}
+CV_ALLOWED_CONTENT_TYPES = {
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+CERTIFICATE_ALLOWED_EXTENSIONS = {"pdf", "jpg", "jpeg", "png"}
+CERTIFICATE_ALLOWED_CONTENT_TYPES = {"application/pdf", "image/jpeg", "image/png"}
+
+
+def _extension_of(filename: str) -> str:
+    return filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+
+
+async def _validate_and_read(
+    file: UploadFile, allowed_extensions: set[str], allowed_content_types: set[str], label: str
+) -> bytes:
+    ext = _extension_of(file.filename or "")
+    if ext not in allowed_extensions or (file.content_type not in allowed_content_types):
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"{label}: tipe file tidak didukung (izinkan: {', '.join(sorted(allowed_extensions))})",
+        )
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"{label}: ukuran file melebihi 5MB",
+        )
+    if len(content) == 0:
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"{label}: file kosong"
+        )
+    return content
+
+
+async def validate_cv(file: UploadFile) -> bytes:
+    return await _validate_and_read(file, CV_ALLOWED_EXTENSIONS, CV_ALLOWED_CONTENT_TYPES, "CV")
+
+
+async def validate_certificate(file: UploadFile) -> bytes:
+    return await _validate_and_read(
+        file, CERTIFICATE_ALLOWED_EXTENSIONS, CERTIFICATE_ALLOWED_CONTENT_TYPES, "Sertifikat"
+    )
+
+
+def find_duplicate(db: Session, job_posting_id: uuid.UUID, email: str) -> Candidate | None:
+    """SRS §7 edge case: same email on the same job is a *warning*, not a
+    rejection — could legitimately be a re-apply."""
+    return db.scalar(
+        select(Candidate).where(
+            Candidate.job_posting_id == job_posting_id, Candidate.email == email
+        )
+    )
+
+
+async def create_candidate(
+    db: Session,
+    job_posting_id: uuid.UUID,
+    full_name: str,
+    email: str,
+    phone: str,
+    cv_file: UploadFile,
+    certificate_files: list[UploadFile],
+) -> tuple[Candidate, bool]:
+    if len(certificate_files) > MAX_CERTIFICATE_FILES:
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Maksimal {MAX_CERTIFICATE_FILES} file sertifikat",
+        )
+
+    cv_content = await validate_cv(cv_file)
+    certificate_contents = [(f, await validate_certificate(f)) for f in certificate_files]
+
+    duplicate = find_duplicate(db, job_posting_id, email)
+
+    candidate_id = uuid.uuid4()
+    cv_ext = _extension_of(cv_file.filename or "cv.pdf")
+    cv_path = f"candidates/{job_posting_id}/{candidate_id}/cv.{cv_ext}"
+    upload_file(cv_path, cv_content, cv_file.content_type or "application/octet-stream")
+
+    certificate_paths: list[str] = []
+    for i, (f, content) in enumerate(certificate_contents):
+        ext = _extension_of(f.filename or f"certificate_{i}")
+        path = f"candidates/{job_posting_id}/{candidate_id}/certificates/{i}.{ext}"
+        upload_file(path, content, f.content_type or "application/octet-stream")
+        certificate_paths.append(path)
+
+    candidate = Candidate(
+        id=candidate_id,
+        job_posting_id=job_posting_id,
+        full_name=full_name,
+        email=email,
+        phone=phone,
+        cv_file_url=cv_path,
+        certificate_urls=certificate_paths,
+        status=CandidateStatus.new,
+    )
+    db.add(candidate)
+    db.commit()
+    db.refresh(candidate)
+    return candidate, duplicate is not None
+
+
+def list_candidates(db: Session, job_posting_id: uuid.UUID) -> list[Candidate]:
+    return list(
+        db.scalars(
+            select(Candidate)
+            .where(Candidate.job_posting_id == job_posting_id)
+            .order_by(Candidate.applied_at.desc())
+        )
+    )
+
+
+def get_candidate(db: Session, candidate_id: uuid.UUID) -> Candidate:
+    candidate = db.get(Candidate, candidate_id)
+    if candidate is None:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Kandidat tidak ditemukan")
+    return candidate
+
+
+def update_candidate(db: Session, candidate_id: uuid.UUID, data: CandidateUpdate) -> Candidate:
+    """FR-4.3: recruiter correction of intake fields / parsed_profile."""
+    candidate = get_candidate(db, candidate_id)
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(candidate, field, value)
+    db.commit()
+    db.refresh(candidate)
+    return candidate
+
+
+def apply_parsed_profile(db: Session, candidate_id: uuid.UUID, profile: ParsedProfile) -> Candidate:
+    """Called by the Celery task on a successful parse."""
+    candidate = get_candidate(db, candidate_id)
+    candidate.parsed_profile = profile.to_dict()
+    db.commit()
+    db.refresh(candidate)
+    return candidate
+
+
+def mark_needs_manual_review(db: Session, candidate_id: uuid.UUID, reason: str) -> Candidate:
+    """FR-3.5: parsing failed outright — keep the candidate, don't reject."""
+    candidate = get_candidate(db, candidate_id)
+    candidate.status = CandidateStatus.needs_manual_review
+    candidate.parsed_profile = {"warnings": [reason]}
+    db.commit()
+    db.refresh(candidate)
+    return candidate
+
+
+def delete_candidate_files(candidate: Candidate) -> None:
+    delete_files([candidate.cv_file_url, *candidate.certificate_urls])
