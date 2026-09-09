@@ -119,14 +119,14 @@ App at `http://localhost:3000` — redirects to `/login`.
 
 ## Status
 
-Phase 3 of 6 done (candidate intake + resume parsing). See
+Phase 4 of 6 done (AI matching engine + ranking dashboard). See
 `docs/HireLens-AI-Documentation.md` §Task Breakdown for the full plan.
 
 - [x] Phase 0 — repo scaffolding, design tokens, FastAPI + Next.js skeletons
 - [x] Phase 1 — auth (JWT, lockout), role guard, user management
 - [x] Phase 2 — job posting module (CRUD, weight validation, BR-2 lock)
 - [x] Phase 3 — candidate intake, Supabase Storage, async resume parsing
-- [ ] Phase 4 — matching engine + ranking dashboard
+- [x] Phase 4 — rule-based matching engine, LLM-assisted summary/notes, ranking dashboard, status changes
 - [ ] Phase 5 — interview assistant, comparison, export, activity log
 - [ ] Phase 6 — polish, tests, deploy
 
