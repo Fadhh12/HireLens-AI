@@ -22,6 +22,7 @@ export interface ParsedProfile {
   experience?: ParsedField<string[]>;
   skills?: ParsedField<string[]>;
   certifications?: ParsedField<string[]>;
+  experience_years?: ParsedField<number>;
   raw_text_length?: number;
   warnings?: string[];
 }
@@ -40,6 +41,16 @@ export interface Candidate {
   applied_at: string;
 }
 
+/** GET /jobs/{id}/candidates denormalizes each candidate's latest score
+ * in — the ranking table needs it without one request per row. */
+export interface CandidateListItem extends Candidate {
+  final_score: number | null;
+  label: MatchLabel | null;
+  score_computed_at: string | null;
+}
+
 export interface CandidateCreateResponse extends Candidate {
   duplicate_warning: boolean;
 }
+
+export type MatchLabel = "strong_match" | "consider" | "not_a_fit";
