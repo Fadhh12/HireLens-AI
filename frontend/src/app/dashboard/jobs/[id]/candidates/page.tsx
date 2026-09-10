@@ -40,14 +40,19 @@ const STATUS_LABEL: Record<CandidateStatus, string> = {
   needs_manual_review: "Perlu Ditinjau Manual",
 };
 
+// Design system §2.1: success/warning/danger are reserved for the match label
+// (Strong Match/Consider/Not a Fit) ONLY, never for other UI elements — pipeline
+// status here reads off the ink/primary scale instead so the two never collide
+// (Task 6.3 finding: this used to borrow success/warning/danger, same pills as
+// the match label sitting right next to it in the ranking table).
 const STATUS_BADGE: Record<CandidateStatus, string> = {
   new: "bg-muted text-ink-600",
   screening: "bg-secondary text-primary",
-  shortlisted: "bg-success-100 text-success-700",
-  interviewed: "bg-secondary text-primary",
-  hired: "bg-success-100 text-success-700",
-  rejected: "bg-danger-100 text-danger-700",
-  needs_manual_review: "bg-warning-100 text-warning-700",
+  shortlisted: "bg-secondary text-primary",
+  interviewed: "bg-primary text-primary-foreground",
+  hired: "bg-primary text-primary-foreground",
+  rejected: "bg-ink-900/10 text-ink-900",
+  needs_manual_review: "border border-ink-400 text-ink-900",
 };
 
 const LABEL_FILTERS: MatchLabel[] = ["strong_match", "consider", "not_a_fit"];

@@ -32,10 +32,13 @@ const STATUS_LABEL: Record<JobStatus, string> = {
   closed: "Closed",
 };
 
+// Design system §2.1: success/warning/danger are reserved for the candidate
+// match label (Strong Match/Consider/Not a Fit) ONLY — job status reads off
+// the ink/primary scale instead (Task 6.3 finding).
 const STATUS_BADGE: Record<JobStatus, string> = {
   draft: "bg-muted text-ink-600",
-  active: "bg-success-100 text-success-700",
-  closed: "bg-danger-100 text-danger-700",
+  active: "bg-secondary text-primary",
+  closed: "bg-ink-900/10 text-ink-900",
 };
 
 type StatusFilter = JobStatus | "all";
