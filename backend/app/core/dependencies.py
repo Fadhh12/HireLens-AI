@@ -4,14 +4,16 @@ plus role guards enforcing the SRS §2 role matrix
 (admin / recruiter / hiring_manager / interviewer).
 """
 
+import secrets
 from collections.abc import Callable
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import InvalidTokenError
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.modules.auth.model import User
@@ -60,3 +62,19 @@ def require_role(*roles: str) -> Callable[[User], User]:
         return current_user
 
     return _guard
+
+
+def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
+    """Guards the public intake bridge (Google Form -> Apps Script -> this
+    API) — the caller there is a script holding a shared secret, not a user
+    with a JWT, so this is a separate, deliberately narrow auth path (only
+    the one endpoint uses it). Not configuring PUBLIC_APPLY_API_KEY disables
+    the endpoint entirely (503) rather than defaulting it open."""
+    configured = get_settings().public_apply_api_key
+    if not configured:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Public intake belum dikonfigurasi (PUBLIC_APPLY_API_KEY kosong)",
+        )
+    if not x_api_key or not secrets.compare_digest(x_api_key, configured):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API key tidak valid")

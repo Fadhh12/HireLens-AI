@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     # --- CORS ---
     cors_origins: str = "http://localhost:3000"
 
+    # --- Public intake bridge (Google Form -> Apps Script -> this API) ---
+    # Static shared-secret, not a JWT — the caller is a script, not a logged-in
+    # user. Empty by default so the endpoint 503s until deliberately configured.
+    public_apply_api_key: str = ""
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

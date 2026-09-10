@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from fastapi.responses import Response
 from pydantic import ValidationError
 
-from app.core.dependencies import get_current_user, require_role
+from app.core.dependencies import get_current_user, require_api_key, require_role
 from app.db.session import get_db
 from app.modules.auth.model import User
 from app.modules.candidates import service
@@ -20,7 +20,7 @@ from app.modules.candidates.schema import (
     CandidateStatusUpdate,
     CandidateUpdate,
 )
-from app.modules.jobs.model import JobStatus
+from app.modules.jobs.model import JobPosting, JobStatus
 from app.modules.jobs.service import get_job
 from app.modules.matching_engine import service as matching_service
 from app.modules.matching_engine.schema import CandidateScoreOut
@@ -88,6 +88,63 @@ async def intake_candidate(
     )
 
     # Async — parsing must never block the upload response (brief §7).
+    parse_candidate_documents.delay(str(candidate.id))
+
+    return CandidateCreateResponse(**CandidateOut.model_validate(candidate).model_dump(), duplicate_warning=is_duplicate)
+
+
+@router.post(
+    "/public/apply",
+    response_model=CandidateCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def public_apply(
+    job_title: str = Form(...),
+    full_name: str = Form(...),
+    email: str = Form(...),
+    phone: str = Form(...),
+    cv_file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: None = Depends(require_api_key),
+) -> CandidateCreateResponse:
+    """Public candidate intake — the Google Form/Apps Script bridge (Task
+    6.x, user-requested test channel). Auth is a static API key
+    (require_api_key), not a JWT: the caller is a script running on Google's
+    servers on an external applicant's behalf, not a logged-in HireLens user.
+
+    Job is looked up by exact title (matches the Form's dropdown value)
+    rather than by id, so the Apps Script config never has to carry a job's
+    internal UUID — just the same title text a human sees in the dropdown.
+    Everything past that point is identical to the authenticated intake
+    path: same validation, same real parser + real scorer via Celery, same
+    duplicate-email warning.
+    """
+    job = db.query(JobPosting).filter(JobPosting.title == job_title).first()
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job '{job_title}' tidak ditemukan")
+    if job.status != JobStatus.active:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Job posting ini sudah tidak menerima kandidat baru (FR-2.4)",
+        )
+
+    try:
+        form = CandidateIntakeForm(full_name=full_name, email=email, phone=phone)
+    except ValidationError as exc:
+        messages = "; ".join(e["msg"] for e in exc.errors())
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=messages) from exc
+
+    candidate, is_duplicate = await service.create_candidate(
+        db,
+        job_posting_id=job.id,
+        full_name=form.full_name,
+        email=form.email,
+        phone=form.phone,
+        cv_file=cv_file,
+        certificate_files=[],
+        assessment_input=None,
+    )
+
     parse_candidate_documents.delay(str(candidate.id))
 
     return CandidateCreateResponse(**CandidateOut.model_validate(candidate).model_dump(), duplicate_warning=is_duplicate)
