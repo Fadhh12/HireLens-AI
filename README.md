@@ -17,9 +17,9 @@ Conventional CV screening is slow, subjective, and inconsistent across recruiter
 | Background jobs | Celery + Redis (resume parsing & LLM calls are async, never block a request) |
 | Database | PostgreSQL (Supabase-hosted) + SQLAlchemy + Alembic |
 | Object storage | Supabase Storage (private bucket, signed URLs) |
-| Resume parsing | PyMuPDF/pdfplumber + spaCy/regex entity extraction |
+| Resume parsing | PyMuPDF/pdfplumber text extraction + regex/section-heuristic entity extraction |
 | Generative AI | LangChain + Gemini API (provider swappable behind one interface) |
-| Auth | JWT (access + refresh), passlib/bcrypt |
+| Auth | JWT (access + refresh), bcrypt |
 | Infra | No Docker — plain Python venv + `uvicorn`, native Redis |
 
 ## Architecture
@@ -116,6 +116,22 @@ npm run dev
 ```
 
 App at `http://localhost:3000` — redirects to `/login`.
+
+### Demo data
+
+With the backend `.venv` active and migrations applied:
+
+```bash
+cd backend
+python scripts/seed_demo_data.py
+```
+
+Seeds 3 users (recruiter/hiring_manager/interviewer), 2 job postings, and
+5 candidates — every score comes from the real parser + real scoring
+engine (nothing hand-typed), spread across all three match labels for a
+representative demo. Prints each seeded login on completion; the bootstrap
+Admin account (`scripts/create_admin.py`) works too. Doesn't need Celery/
+Redis running — parsing and scoring are called synchronously in the script.
 
 ## Status
 
