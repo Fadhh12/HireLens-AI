@@ -29,6 +29,7 @@ import { listCandidates } from "@/lib/candidates/api";
 import type { CandidateListItem, CandidateStatus, MatchLabel } from "@/lib/candidates/types";
 import { getJob } from "@/lib/jobs/api";
 import type { JobPosting } from "@/lib/jobs/types";
+import { useAuthStore } from "@/lib/auth/store";
 
 const STATUS_LABEL: Record<CandidateStatus, string> = {
   new: "Baru",
@@ -60,8 +61,10 @@ const LABEL_FILTERS: MatchLabel[] = ["strong_match", "consider", "not_a_fit"];
 type SortKey = "score_desc" | "applied_desc" | "name_asc";
 
 export default function RankingDashboardPage() {
+  // UI/UX Flow §3 Screen 6: Recruiter, Hiring Manager (Task 6.3 finding — this
+  // was wrongly locked to admin/recruiter only, blocking Flow C review).
   return (
-    <RequireAuth allowedRoles={["admin", "recruiter"]}>
+    <RequireAuth allowedRoles={["admin", "recruiter", "hiring_manager"]}>
       <RankingDashboardContent />
     </RequireAuth>
   );
@@ -70,6 +73,8 @@ export default function RankingDashboardPage() {
 function RankingDashboardContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const role = useAuthStore((s) => s.user?.role);
+  const canIntake = role === "admin" || role === "recruiter"; // matches candidates/new's own RequireAuth
   const [job, setJob] = useState<JobPosting | null>(null);
   const [candidates, setCandidates] = useState<CandidateListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,10 +152,12 @@ function RankingDashboardContent() {
           >
             Bandingkan ({selected.length})
           </Button>
-          <Button
-            render={<Link href={`/dashboard/jobs/${job.id}/candidates/new`}>+ Tambah Kandidat</Link>}
-            nativeButton={false}
-          />
+          {canIntake && (
+            <Button
+              render={<Link href={`/dashboard/jobs/${job.id}/candidates/new`}>+ Tambah Kandidat</Link>}
+              nativeButton={false}
+            />
+          )}
         </div>
       </div>
 

@@ -31,7 +31,10 @@ export default function DashboardOverviewPage() {
   const [newThisWeek, setNewThisWeek] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const canSeeJobs = user?.role === "admin" || user?.role === "recruiter";
+  // UI/UX Flow §3 Screen 2: Admin, Recruiter, Hiring Manager (Task 6.3 finding —
+  // hiring_manager was missing, leaving them with a blank overview and no way to
+  // reach the ranking dashboard from here).
+  const canSeeJobs = user?.role === "admin" || user?.role === "recruiter" || user?.role === "hiring_manager";
 
   useEffect(() => {
     if (!canSeeJobs) {

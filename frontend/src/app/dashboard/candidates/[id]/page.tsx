@@ -31,6 +31,7 @@ import {
 import type { Candidate, CandidateStatus } from "@/lib/candidates/types";
 import { getCandidateScore } from "@/lib/matching/api";
 import type { CandidateScore } from "@/lib/matching/types";
+import { useAuthStore } from "@/lib/auth/store";
 
 // UI/UX Layar 7: Interview Guide tab appears once shortlisted+.
 const INTERVIEW_GUIDE_ELIGIBLE: CandidateStatus[] = ["shortlisted", "interviewed", "hired", "rejected"];
@@ -73,8 +74,13 @@ const POLL_INTERVAL_MS = 2500;
 const POLL_TIMEOUT_MS = 40000;
 
 export default function CandidateDetailPage() {
+  // UI/UX Flow §3 Screen 7: Recruiter, Hiring Manager, Interviewer all read this
+  // page (hiring manager needs it for Flow E's final status decision, interviewer
+  // to reach the Interview Guide link/prep). Per-section edit rights below are
+  // narrower and match what the backend already enforces (Task 6.3 finding: the
+  // page itself was wrongly locked to admin/recruiter only).
   return (
-    <RequireAuth allowedRoles={["admin", "recruiter"]}>
+    <RequireAuth allowedRoles={["admin", "recruiter", "hiring_manager", "interviewer"]}>
       <CandidateDetailContent />
     </RequireAuth>
   );
@@ -90,6 +96,14 @@ function VerifiedTag({ verified }: { verified: boolean }) {
 
 function CandidateDetailContent() {
   const params = useParams<{ id: string }>();
+  const role = useAuthStore((s) => s.user?.role);
+  // Mirrors the backend's own role checks (app/modules/candidates/router.py):
+  // PATCH /candidates/{id} (manual correction) is admin/recruiter only, PATCH
+  // .../status (Flow E decision) also allows hiring_manager. Interviewer gets
+  // read-only access to this page — they're here for the Interview Guide link,
+  // not to edit anything.
+  const canEditProfile = role === "admin" || role === "recruiter";
+  const canChangeStatus = role === "admin" || role === "recruiter" || role === "hiring_manager";
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [score, setScore] = useState<CandidateScore | null>(null);
   const [loading, setLoading] = useState(true);
@@ -218,6 +232,7 @@ function CandidateDetailContent() {
               editing={editing}
               setEditing={setEditing}
               onSaved={setCandidate}
+              canEdit={canEditProfile}
             />
           )}
 
@@ -262,7 +277,7 @@ function CandidateDetailContent() {
             </section>
           )}
 
-          <StatusChangeSection candidate={candidate} onChanged={setCandidate} />
+          {canChangeStatus && <StatusChangeSection candidate={candidate} onChanged={setCandidate} />}
         </div>
       </div>
     </div>
@@ -339,12 +354,14 @@ function ParsedProfileSection({
   editing,
   setEditing,
   onSaved,
+  canEdit,
 }: {
   candidate: Candidate;
   profile: NonNullable<Candidate["parsed_profile"]>;
   editing: boolean;
   setEditing: (v: boolean) => void;
   onSaved: (c: Candidate) => void;
+  canEdit: boolean;
 }) {
   const [skills, setSkills] = useState<string[]>(profile.skills?.value ?? []);
   const [education, setEducation] = useState((profile.education?.value ?? []).join("\n"));
@@ -377,9 +394,11 @@ function ParsedProfileSection({
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <h2>Hasil Ekstraksi CV</h2>
-        <Button variant="outline" size="sm" onClick={() => setEditing(!editing)}>
-          {editing ? "Batal" : "Koreksi Manual"}
-        </Button>
+        {canEdit && (
+          <Button variant="outline" size="sm" onClick={() => setEditing(!editing)}>
+            {editing ? "Batal" : "Koreksi Manual"}
+          </Button>
+        )}
       </div>
 
       <div className="space-y-1.5">
