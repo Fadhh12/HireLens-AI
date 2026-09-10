@@ -1,20 +1,20 @@
-"""Celery task: parse one candidate's CV (FR-4, FR-3.5).
+"""Background task: parse one candidate's CV (FR-4, FR-3.5).
 
-Runs in the worker process, so it opens its own DB session rather than
-reusing a request-scoped one from app.db.session.get_db.
+Runs via FastAPI's BackgroundTasks (in-process, after the response is
+sent) rather than a separate Celery worker — see app/workers/__init__.py
+for why. Opens its own DB session since it doesn't run inside a request's
+dependency-injected one.
 """
 
 import logging
 
 from app.db.session import SessionLocal
 from app.modules.candidates import service as candidates_service
-from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="parse_candidate_documents", bind=True, max_retries=0)
-def parse_candidate_documents(self, candidate_id: str) -> None:
+def parse_candidate_documents(candidate_id: str) -> None:
     from app.modules.document_ai.service import parse_candidate_cv
     from app.workers.tasks_scoring import compute_candidate_score
 
@@ -39,4 +39,7 @@ def parse_candidate_documents(self, candidate_id: str) -> None:
     # ranking < 30 detik" metric implies a score should exist right after
     # intake even if parsing came up empty (skill_fit just scores low,
     # which is itself informative rather than leaving no score row at all).
-    compute_candidate_score.delay(candidate_id)
+    # Direct call rather than another add_task hop — we're already running
+    # off the request/response path, so there's nothing to gain by
+    # scheduling a second background task instead of just calling on.
+    compute_candidate_score(candidate_id)

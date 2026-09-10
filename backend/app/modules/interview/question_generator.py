@@ -6,9 +6,9 @@ interview questions is inherently a generation task, not something
 FR-5.5's "LLM must not be the sole source of the score" restricts (that
 rule is scoped to the numeric match score specifically). If the LLM
 call fails outright, the caller just doesn't get a guide this attempt —
-there's nothing rule-based to fall back to, so the Celery task simply
-logs the failure and produces no row (candidate keeps whatever earlier
-version already existed, if any).
+there's nothing rule-based to fall back to, so the background task
+simply logs the failure and produces no row (candidate keeps whatever
+earlier version already existed, if any).
 """
 
 import json

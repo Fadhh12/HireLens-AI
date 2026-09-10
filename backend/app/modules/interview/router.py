@@ -2,7 +2,7 @@
 
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user, require_role
@@ -19,11 +19,12 @@ router = APIRouter(tags=["interview"])
 @router.post("/candidates/{candidate_id}/interview-guide", status_code=202)
 def trigger_generate_guide(
     candidate_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "interviewer")),
 ) -> dict:
     service.check_eligible_for_guide(db, candidate_id)  # BR-4, synchronous so callers get real feedback
-    generate_interview_guide_task.delay(str(candidate_id), str(current_user.id))
+    background_tasks.add_task(generate_interview_guide_task, str(candidate_id), str(current_user.id))
     return {"detail": "Interview guide sedang di-generate"}
 
 

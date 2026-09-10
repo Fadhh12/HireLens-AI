@@ -1,17 +1,18 @@
-"""Celery task: generate one interview guide (FR-8.1, async per SDD §4)."""
+"""Background task: generate one interview guide (FR-8.1, async per SDD §4).
+
+Runs via FastAPI's BackgroundTasks — see app/workers/__init__.py.
+"""
 
 import logging
 import uuid
 
 from app.db.session import SessionLocal
 from app.modules.interview import service as interview_service
-from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="generate_interview_guide_task", bind=True, max_retries=0)
-def generate_interview_guide_task(self, candidate_id: str, actor_id: str) -> None:
+def generate_interview_guide_task(candidate_id: str, actor_id: str) -> None:
     db = SessionLocal()
     try:
         interview_service.generate_guide(db, uuid.UUID(candidate_id), uuid.UUID(actor_id))

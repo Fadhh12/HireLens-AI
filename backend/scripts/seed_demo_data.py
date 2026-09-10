@@ -13,9 +13,8 @@ jobs (by title), and candidates (by job + email) that already exist):
     cd backend
     python scripts/seed_demo_data.py
 
-Does NOT need Celery/Redis running — parsing and scoring are called
-synchronously here rather than via the async task queue, so seeding
-is a single deterministic script run.
+Parsing and scoring are called synchronously here rather than via
+BackgroundTasks, so seeding is a single deterministic script run.
 """
 
 import asyncio

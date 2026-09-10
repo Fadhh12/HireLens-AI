@@ -42,11 +42,6 @@ class Settings(BaseSettings):
     login_max_attempts: int = 5
     login_lockout_minutes: int = 15
 
-    # --- Redis / Celery ---
-    redis_url: str = "redis://localhost:6379/0"
-    celery_broker_url: str = "redis://localhost:6379/0"
-    celery_result_backend: str = "redis://localhost:6379/1"
-
     # --- Generative AI ---
     llm_provider: Literal["gemini", "openai"] = "gemini"
     google_api_key: str = ""

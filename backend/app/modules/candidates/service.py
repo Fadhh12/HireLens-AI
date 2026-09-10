@@ -181,7 +181,7 @@ def update_status(
 
 
 def apply_parsed_profile(db: Session, candidate_id: uuid.UUID, profile: ParsedProfile) -> Candidate:
-    """Called by the Celery task on a successful parse."""
+    """Called by the background parsing task on a successful parse."""
     candidate = get_candidate(db, candidate_id)
     candidate.parsed_profile = profile.to_dict()
     db.commit()

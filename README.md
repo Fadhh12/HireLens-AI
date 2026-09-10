@@ -14,13 +14,13 @@ Conventional CV screening is slow, subjective, and inconsistent across recruiter
 |---|---|
 | Frontend | Next.js 15, React 19, TypeScript, TailwindCSS, Shadcn UI |
 | Backend | FastAPI (Python 3.11+), Pydantic v2 |
-| Background jobs | Celery + Redis (resume parsing & LLM calls are async, never block a request) |
+| Background jobs | FastAPI `BackgroundTasks` (resume parsing & LLM calls run after the response is sent, never inline in a request) |
 | Database | PostgreSQL (Supabase-hosted) + SQLAlchemy + Alembic |
 | Object storage | Supabase Storage (private bucket, signed URLs) |
 | Resume parsing | PyMuPDF/pdfplumber text extraction + regex/section-heuristic entity extraction |
 | Generative AI | LangChain + Gemini API (provider swappable behind one interface) |
 | Auth | JWT (access + refresh), bcrypt |
-| Infra | No Docker — plain Python venv + `uvicorn`, native Redis |
+| Infra | No Docker — plain Python venv + `uvicorn`, no separate worker/broker |
 
 ## Architecture
 
@@ -32,7 +32,7 @@ Next.js client → FastAPI (auth, rate limit, validation)
                      ├── Document AI Service (parsing)
                      └── Matching Engine (rule-based scoring + LLM assist)
                               │
-                     Celery/Redis background workers
+                     FastAPI BackgroundTasks (in-process)
                               │
                      Supabase Postgres + Supabase Storage
                               │
@@ -50,7 +50,7 @@ The matching engine is rule-based and deterministic (skill fit / experience fit 
 │   │   ├── main.py                # FastAPI entrypoint
 │   │   ├── core/                  # config, security (JWT/hashing), auth dependencies
 │   │   ├── modules/                # domain modules: auth, jobs, candidates, document_ai, matching_engine, interview
-│   │   ├── workers/                # Celery app + tasks (parsing, scoring)
+│   │   ├── workers/                # background task functions (parsing, scoring, interview guide)
 │   │   └── db/                     # SQLAlchemy base/session, Alembic migrations
 │   ├── tests/
 │   └── requirements.txt
@@ -63,7 +63,6 @@ The matching engine is rule-based and deterministic (skill fit / experience fit 
 - Python 3.11+
 - Node.js 20+
 - A [Supabase](https://supabase.com) project (Postgres + Storage) — or local PostgreSQL as a fallback
-- Redis (native install — no Docker)
 - A Gemini API key ([Google AI Studio](https://aistudio.google.com/app/apikey))
 
 ### Backend
@@ -91,21 +90,6 @@ after the first is created by an Admin via `POST /api/v1/users` (or the
 User Management screen once logged in). `scripts/create_admin.py` only
 exists to bootstrap that first account.
 
-### Background worker (candidate parsing, from Phase 3)
-
-Resume parsing runs async via Celery + Redis — never inline in the
-upload request.
-
-```bash
-cd backend
-celery -A app.workers.celery_app worker --loglevel=info --pool=solo   # --pool=solo is a Windows requirement
-```
-
-Needs Redis reachable at `REDIS_URL`. Redis has no official Windows
-build; see `backend/.redis-portable/README.md` for a no-admin-rights
-way to run it on Windows (or use WSL2 / a normal Linux box, where
-`redis-server` just works).
-
 ### Frontend
 
 ```bash
@@ -130,8 +114,8 @@ Seeds 3 users (recruiter/hiring_manager/interviewer), 2 job postings, and
 5 candidates — every score comes from the real parser + real scoring
 engine (nothing hand-typed), spread across all three match labels for a
 representative demo. Prints each seeded login on completion; the bootstrap
-Admin account (`scripts/create_admin.py`) works too. Doesn't need Celery/
-Redis running — parsing and scoring are called synchronously in the script.
+Admin account (`scripts/create_admin.py`) works too. Parsing and scoring
+are called synchronously in the script, no background worker needed.
 
 ## Status
 

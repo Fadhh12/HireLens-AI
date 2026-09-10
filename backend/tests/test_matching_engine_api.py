@@ -87,8 +87,8 @@ def test_compute_and_save_score_end_to_end(client, db_session, mock_llm):
     job = _make_job(db_session)
     candidate = _make_candidate(db_session, job.id)
 
-    # Directly call the service (equivalent of what the Celery task does)
-    # rather than going through Celery in tests.
+    # Directly call the service (equivalent of what the background task
+    # does) rather than going through a real BackgroundTasks dispatch.
     matching_service.compute_and_save_score(db_session, candidate.id)
 
     resp = client.get(f"/api/v1/candidates/{candidate.id}/score", headers={"Authorization": f"Bearer {token}"})

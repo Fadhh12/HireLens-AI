@@ -3,7 +3,7 @@
 import json
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import Response
 from pydantic import ValidationError
 
@@ -39,6 +39,7 @@ router = APIRouter(tags=["candidates"])
 )
 async def intake_candidate(
     job_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     full_name: str = Form(...),
     email: str = Form(...),
     phone: str = Form(...),
@@ -88,7 +89,7 @@ async def intake_candidate(
     )
 
     # Async — parsing must never block the upload response (brief §7).
-    parse_candidate_documents.delay(str(candidate.id))
+    background_tasks.add_task(parse_candidate_documents, str(candidate.id))
 
     return CandidateCreateResponse(**CandidateOut.model_validate(candidate).model_dump(), duplicate_warning=is_duplicate)
 
@@ -99,6 +100,7 @@ async def intake_candidate(
     status_code=status.HTTP_201_CREATED,
 )
 async def public_apply(
+    background_tasks: BackgroundTasks,
     job_title: str = Form(...),
     full_name: str = Form(...),
     email: str = Form(...),
@@ -116,8 +118,8 @@ async def public_apply(
     rather than by id, so the Apps Script config never has to carry a job's
     internal UUID — just the same title text a human sees in the dropdown.
     Everything past that point is identical to the authenticated intake
-    path: same validation, same real parser + real scorer via Celery, same
-    duplicate-email warning.
+    path: same validation, same real parser + real scorer via
+    BackgroundTasks, same duplicate-email warning.
     """
     job = db.query(JobPosting).filter(JobPosting.title == job_title).first()
     if job is None:
@@ -145,7 +147,7 @@ async def public_apply(
         assessment_input=None,
     )
 
-    parse_candidate_documents.delay(str(candidate.id))
+    background_tasks.add_task(parse_candidate_documents, str(candidate.id))
 
     return CandidateCreateResponse(**CandidateOut.model_validate(candidate).model_dump(), duplicate_warning=is_duplicate)
 
@@ -212,6 +214,7 @@ def get_candidate(
 def update_candidate(
     candidate_id: uuid.UUID,
     payload: CandidateUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     _: User = Depends(require_role("admin", "recruiter")),
 ) -> Candidate:
@@ -219,7 +222,7 @@ def update_candidate(
     fields_set = payload.model_dump(exclude_unset=True)
     if "parsed_profile" in fields_set or "assessment_input" in fields_set:
         # A correction to either input invalidates the previous score.
-        compute_candidate_score.delay(str(candidate_id))
+        background_tasks.add_task(compute_candidate_score, str(candidate_id))
     return updated
 
 
@@ -236,13 +239,14 @@ def update_candidate_status(
 @router.post("/candidates/{candidate_id}/score", status_code=status.HTTP_202_ACCEPTED)
 def trigger_score(
     candidate_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     _: User = Depends(require_role("admin", "recruiter")),
 ) -> dict:
     """Re-trigger scoring (async) — e.g. after a manual correction to the
     parsed profile or assessment_input."""
     service.get_candidate(db, candidate_id)  # 404s early if the id is bad
-    compute_candidate_score.delay(str(candidate_id))
+    background_tasks.add_task(compute_candidate_score, str(candidate_id))
     return {"detail": "Perhitungan skor dijadwalkan"}
 
 

@@ -1,8 +1,8 @@
 """Orchestrates parsing for one candidate: downloads the CV from storage,
 runs parser.parse_resume(), and reports success/failure. Failure handling
-itself (setting status=needs_manual_review) lives in the Celery task
-(workers/tasks_parsing.py) so this module stays testable without a
-broker — see FR-3.5.
+itself (setting status=needs_manual_review) lives in the background task
+(workers/tasks_parsing.py) so this module stays testable in isolation —
+see FR-3.5.
 """
 
 from app.core.storage import get_supabase

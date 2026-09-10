@@ -22,9 +22,6 @@ pyjwt==2.10.1
 # Supabase's newer sb_secret_/sb_publishable_ key format outright.
 supabase==2.31.0
 
-# --- Background jobs ---
-celery==5.4.0
-redis==5.2.1
 
 # --- Resume parsing ---
 # Docs list "spaCy/regex" for entity extraction (either, not both) — the

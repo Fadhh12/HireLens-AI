@@ -24,8 +24,8 @@ _ALLOWED_STATUSES = {
 
 
 def check_eligible_for_guide(db: Session, candidate_id: uuid.UUID) -> None:
-    """BR-4, checked synchronously by the router before enqueueing the
-    Celery task — otherwise the request always returns 202 (task
+    """BR-4, checked synchronously by the router before scheduling the
+    background task — otherwise the request always returns 202 (task
     accepted) and an ineligible candidate silently never gets a guide,
     with no feedback to the caller. The task itself re-checks too, since
     status could change between the request and the task running."""

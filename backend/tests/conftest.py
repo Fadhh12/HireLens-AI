@@ -68,29 +68,25 @@ def mock_storage(monkeypatch: pytest.MonkeyPatch):
 
 @pytest.fixture()
 def mock_parse_task(monkeypatch: pytest.MonkeyPatch):
-    """Candidate intake tests shouldn't need a real Celery broker."""
+    """Candidate intake tests shouldn't run the real parser inline."""
     calls: list[str] = []
 
-    class _FakeDelay:
-        @staticmethod
-        def delay(candidate_id: str) -> None:
-            calls.append(candidate_id)
+    def _fake(candidate_id: str) -> None:
+        calls.append(candidate_id)
 
-    monkeypatch.setattr("app.modules.candidates.router.parse_candidate_documents", _FakeDelay)
+    monkeypatch.setattr("app.modules.candidates.router.parse_candidate_documents", _fake)
     return calls
 
 
 @pytest.fixture()
 def mock_score_task(monkeypatch: pytest.MonkeyPatch):
-    """Candidate/score tests shouldn't need a real Celery broker either."""
+    """Candidate/score tests shouldn't run the real scorer inline."""
     calls: list[str] = []
 
-    class _FakeDelay:
-        @staticmethod
-        def delay(candidate_id: str) -> None:
-            calls.append(candidate_id)
+    def _fake(candidate_id: str) -> None:
+        calls.append(candidate_id)
 
-    monkeypatch.setattr("app.modules.candidates.router.compute_candidate_score", _FakeDelay)
+    monkeypatch.setattr("app.modules.candidates.router.compute_candidate_score", _fake)
     return calls
 
 
