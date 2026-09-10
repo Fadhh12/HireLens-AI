@@ -96,6 +96,46 @@ JOBS = [
         "weight_experience_fit": 30,
         "weight_values_fit": 30,
     },
+    # "Junior Frontend" — NOT created here on purpose: this one already exists
+    # in the DB (created by the user via the UI). Matched by title below so we
+    # reuse its real id and just add candidates to it, same as any other job
+    # skip-if-exists — never recreate/duplicate a job a human already made.
+    {
+        "title": "Junior Frontend",
+        "department": "IT",
+        "description": "placeholder — only used if this job doesn't already exist",
+        "required_skills": ["TypeScript", "React.js", "HTML", "CSS", "Next.js"],
+        "nice_to_have_skills": ["Team work", "Critical Thinking"],
+        "min_experience_years": 0,
+        "level": JobLevel.junior,
+        "weight_skill_fit": 35,
+        "weight_experience_fit": 45,
+        "weight_values_fit": 20,
+    },
+    {
+        "title": "Data Analyst",
+        "department": "Business Intelligence",
+        "description": "Menganalisis data operasional & bisnis untuk mendukung pengambilan keputusan, membuat dashboard dan laporan rutin.",
+        "required_skills": ["SQL", "Excel", "Data Visualization"],
+        "nice_to_have_skills": ["Python", "Tableau"],
+        "min_experience_years": 1,
+        "level": JobLevel.junior,
+        "weight_skill_fit": 45,
+        "weight_experience_fit": 30,
+        "weight_values_fit": 25,
+    },
+    {
+        "title": "UX Designer",
+        "department": "Product",
+        "description": "Merancang pengalaman pengguna produk digital, dari riset hingga wireframe & prototype siap dev.",
+        "required_skills": ["Figma", "UI Design", "User Research"],
+        "nice_to_have_skills": ["Prototyping", "Wireframing"],
+        "min_experience_years": 1,
+        "level": JobLevel.mid,
+        "weight_skill_fit": 40,
+        "weight_experience_fit": 25,
+        "weight_values_fit": 35,
+    },
 ]
 
 # (job index, name, email, phone, cv text, assessment or None)
@@ -177,6 +217,156 @@ Business Analyst, Retail Nusantara (2023-2025)
 Keahlian
 Excel, SQL, Presentasi""",
         {"mbti": "ISTJ", "competency_scores": {"communication": 3, "leadership": 2, "problem_solving": 3, "teamwork": 3}},
+    ),
+    # --- Junior Frontend (job idx 2) ---
+    (
+        2, "Farhan Nugroho", "farhan.nugroho@example.com", "0817-2222-3333",
+        """Farhan Nugroho
+farhan.nugroho@example.com | 0817-2222-3333
+
+Pendidikan
+S1 Ilmu Komputer, Universitas Gadjah Mada (2020-2024)
+
+Pengalaman Kerja
+Frontend Developer Intern, Digitalku Studio (2024-2025)
+Membangun antarmuka web dengan React.js dan Next.js, styling dengan CSS modules
+Asisten Praktikum Pemrograman Web, Fakultas Ilmu Komputer UGM (2023-2024)
+
+Keahlian
+TypeScript, React.js, Next.js, HTML, CSS, Git""",
+        None,
+    ),
+    (
+        2, "Maya Anindya", "maya.anindya@example.com", "0817-4444-5555",
+        """Maya Anindya
+maya.anindya@example.com | 0817-4444-5555
+
+Pendidikan
+S1 Sistem Informasi, Universitas Telkom (2021-2025)
+
+Pengalaman Kerja
+Peserta Bootcamp Web Development, Dicoding (2024)
+Membuat beberapa proyek landing page menggunakan React.js dan HTML/CSS
+
+Keahlian
+React.js, HTML, CSS, JavaScript""",
+        None,
+    ),
+    (
+        2, "Bagas Setiawan", "bagas.setiawan@example.com", "0817-6666-7777",
+        """Bagas Setiawan
+bagas.setiawan@example.com | 0817-6666-7777
+
+Pendidikan
+S1 Desain Komunikasi Visual, Universitas Trisakti (2018-2022)
+
+Pengalaman Kerja
+Graphic Designer, Agensi Kreatif Warna (2022-2025)
+Membuat materi desain promosi untuk media sosial klien
+
+Keahlian
+Adobe Photoshop, Adobe Illustrator, Canva""",
+        None,
+    ),
+    # --- Data Analyst (job idx 3) ---
+    (
+        3, "Indah Permata", "indah.permata@example.com", "0818-1111-2222",
+        """Indah Permata
+indah.permata@example.com | 0818-1111-2222
+
+Pendidikan
+S1 Statistika, Institut Pertanian Bogor (2018-2022)
+
+Pengalaman Kerja
+Data Analyst, Marketplace Nusantara (2022-2025)
+Membuat dashboard penjualan mingguan dengan SQL dan Tableau, analisis tren untuk tim marketing
+Data Analyst Intern, Bank Digital Amanah (2021-2022)
+
+Keahlian
+SQL, Excel, Data Visualization, Python, Tableau""",
+        {"mbti": "ISTP", "competency_scores": {"communication": 4, "leadership": 3, "problem_solving": 5, "teamwork": 4}},
+    ),
+    (
+        3, "Yusuf Ramadhan", "yusuf.ramadhan@example.com", "0818-3333-4444",
+        """Yusuf Ramadhan
+yusuf.ramadhan@example.com | 0818-3333-4444
+
+Pendidikan
+S1 Manajemen, Universitas Padjadjaran (2019-2023)
+
+Pengalaman Kerja
+Staff Finance, PT Sumber Rejeki (2023-2025)
+Menyusun laporan keuangan bulanan menggunakan Excel dan query SQL sederhana
+
+Keahlian
+Excel, SQL""",
+        None,
+    ),
+    (
+        3, "Wulan Kartika", "wulan.kartika@example.com", "0818-5555-6666",
+        """Wulan Kartika
+wulan.kartika@example.com | 0818-5555-6666
+
+Pendidikan
+D3 Akuntansi, Politeknik Negeri Jakarta (2020-2023)
+
+Pengalaman Kerja
+Staff Administrasi, Klinik Sehat Selalu (2023-2025)
+Mengelola data pasien dan laporan administrasi harian menggunakan Excel
+
+Keahlian
+Microsoft Excel, Microsoft Word""",
+        None,
+    ),
+    # --- UX Designer (job idx 4) ---
+    (
+        4, "Nadia Kusuma", "nadia.kusuma@example.com", "0819-1111-2222",
+        """Nadia Kusuma
+nadia.kusuma@example.com | 0819-1111-2222
+
+Pendidikan
+S1 Desain Komunikasi Visual, Institut Teknologi Bandung (2018-2022)
+
+Pengalaman Kerja
+UX Designer, Aplikasi Kesehatan Sehati (2022-2025)
+Melakukan user research, membuat wireframe & prototype interaktif dengan Figma untuk fitur baru
+UI Designer Intern, Startup Fintech Cepat (2021-2022)
+
+Keahlian
+Figma, UI Design, User Research, Prototyping, Wireframing""",
+        {"mbti": "INFP", "competency_scores": {"communication": 5, "leadership": 3, "problem_solving": 4, "teamwork": 5}},
+    ),
+    (
+        4, "Reza Pratama", "reza.pratama@example.com", "0819-3333-4444",
+        """Reza Pratama
+reza.pratama@example.com | 0819-3333-4444
+
+Pendidikan
+S1 Desain Produk, Universitas Multimedia Nusantara (2021-2025)
+
+Pengalaman Kerja
+Freelance UI Designer (2024-2025)
+Mendesain tampilan aplikasi mobile sederhana menggunakan Figma untuk beberapa klien kecil
+
+Keahlian
+Figma, UI Design""",
+        None,
+    ),
+    (
+        4, "Dian Saputra", "dian.saputra@example.com", "0819-5555-6666",
+        """Dian Saputra
+dian.saputra@example.com | 0819-5555-6666
+
+Pendidikan
+S1 Manajemen Pemasaran, Universitas Airlangga (2019-2023)
+
+Pengalaman Kerja
+Sales Executive, PT Mitra Sejahtera (2023-2025)
+Melakukan penjualan dan negosiasi dengan klien korporat
+
+Keahlian
+Negosiasi, Presentasi, Microsoft Office""",
+        None,
     ),
 ]
 
