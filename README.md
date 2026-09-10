@@ -135,7 +135,7 @@ Redis running — parsing and scoring are called synchronously in the script.
 
 ## Status
 
-Phase 5 of 6 done (interview assistant, comparison, export, activity log). See
+Phase 6 of 6 in progress (polish, tests, deploy). See
 `docs/HireLens-AI-Documentation.md` §Task Breakdown for the full plan.
 
 - [x] Phase 0 — repo scaffolding, design tokens, FastAPI + Next.js skeletons
@@ -145,6 +145,13 @@ Phase 5 of 6 done (interview assistant, comparison, export, activity log). See
 - [x] Phase 4 — rule-based matching engine, LLM-assisted summary/notes, ranking dashboard, status changes
 - [x] Phase 5 — interview guide generator, candidate comparison, PDF export, activity log, dashboard overview
 - [ ] Phase 6 — polish, tests, deploy
+  - [x] 6.1 — manual/E2E QA of Flow A–E (job posting → intake/parsing → ranking/shortlist → interview guide → status decision), real browser against the real backend
+  - [x] 6.2 — unit tests for the scoring logic (`matching_engine/scoring.py`), 100% line coverage
+  - [ ] 6.3 — UI consistency review (spacing/color/typography vs. design system)
+  - [x] 6.4 — realistic demo seed script
+  - [ ] 6.5 — deploy (backend + frontend + Supabase)
+  - [ ] 6.6 — README polish + short demo video
+  - [ ] 6.7 — portfolio case study write-up
 
 ## License
 
