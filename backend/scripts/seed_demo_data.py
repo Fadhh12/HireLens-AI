@@ -7,8 +7,8 @@ engine (compute_and_save_score), same code path as production. If the
 matching engine is weak on some CV shape, this script will show that
 weakness rather than paper over it (brief §7).
 
-Run once against a fresh-ish database (safe to re-run — skips users/
-jobs that already exist by name/email, but always adds new candidates):
+Run once against a fresh-ish database (safe to re-run — skips users,
+jobs (by title), and candidates (by job + email) that already exist):
 
     cd backend
     python scripts/seed_demo_data.py
@@ -32,9 +32,10 @@ from app.modules.auth.model import UserRole  # noqa: E402
 from app.modules.auth.schema import UserCreate  # noqa: E402
 from app.modules.auth.service import create_user, get_user_by_email  # noqa: E402
 from app.modules.candidates import service as candidates_service  # noqa: E402
+from app.modules.candidates.model import Candidate  # noqa: E402
 from app.modules.document_ai.parser import parse_resume  # noqa: E402
 from app.modules.jobs import service as jobs_service  # noqa: E402
-from app.modules.jobs.model import JobLevel, JobStatus  # noqa: E402
+from app.modules.jobs.model import JobLevel, JobPosting, JobStatus  # noqa: E402
 from app.modules.jobs.schema import JobPostingCreate  # noqa: E402
 from app.modules.matching_engine.service import compute_and_save_score  # noqa: E402
 
@@ -199,6 +200,11 @@ async def main() -> None:
         print("\n=== Jobs ===")
         job_ids = []
         for j in JOBS:
+            existing = db.query(JobPosting).filter(JobPosting.title == j["title"]).first()
+            if existing is not None:
+                job_ids.append(existing.id)
+                print(f"  skip (exists): {existing.title} ({existing.id})")
+                continue
             job = jobs_service.create_job(db, JobPostingCreate(**j, status=JobStatus.active), created_by=admin.id)
             job_ids.append(job.id)
             print(f"  created: {job.title} ({job.id})")
@@ -206,6 +212,16 @@ async def main() -> None:
         print("\n=== Candidates (real parse + real score) ===")
         for job_idx, name, email, phone, cv_text, assessment in CANDIDATES:
             job_id = job_ids[job_idx]
+
+            existing_candidate = (
+                db.query(Candidate)
+                .filter(Candidate.job_posting_id == job_id, Candidate.email == email)
+                .first()
+            )
+            if existing_candidate is not None:
+                print(f"  skip (exists): {name} -> {JOBS[job_idx]['title']}")
+                continue
+
             cv_bytes = _pdf_from_text(cv_text)
             upload = _FakeUploadFile("cv.pdf", cv_bytes, "application/pdf")
 
