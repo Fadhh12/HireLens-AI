@@ -94,7 +94,7 @@ function UsersPageContent() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1>Manajemen User</h1>
           <p className="caption">Kelola akun tim dan role akses (SRS §2).</p>

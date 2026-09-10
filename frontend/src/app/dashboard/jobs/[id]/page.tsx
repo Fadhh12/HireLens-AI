@@ -46,7 +46,7 @@ function JobDetailContent() {
 
   return (
     <div className="max-w-2xl space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1>{job.title}</h1>
         <Button
           variant="outline"

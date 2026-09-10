@@ -147,14 +147,14 @@ function CandidateDetailContent() {
 
   return (
     <div className="max-w-5xl space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1>{candidate.full_name}</h1>
           <p className="text-ink-600 text-sm">
             {candidate.email} • {candidate.phone}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isParsing || isScoring ? (
             <Badge className="bg-secondary text-primary animate-pulse">
               {isParsing ? "Memproses CV..." : "Menghitung skor..."}

@@ -151,9 +151,9 @@ function InterviewGuideContent() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1>Interview Guide</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {versions.length > 0 && (
             <Select value={selected?.id} onValueChange={selectVersion}>
               <SelectTrigger className="w-28">

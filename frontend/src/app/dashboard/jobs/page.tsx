@@ -66,7 +66,7 @@ function JobsListContent() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1>Lowongan</h1>
           <p className="caption">Kelola job posting & kriteria scoring (FR-2).</p>
