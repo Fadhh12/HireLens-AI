@@ -147,7 +147,7 @@ Phase 6 of 6 in progress (polish, tests, deploy). See
 - [ ] Phase 6 — polish, tests, deploy
   - [x] 6.1 — manual/E2E QA of Flow A–E (job posting → intake/parsing → ranking/shortlist → interview guide → status decision), real browser against the real backend
   - [x] 6.2 — unit tests for the scoring logic (`matching_engine/scoring.py`), 100% line coverage
-  - [ ] 6.3 — UI consistency review (spacing/color/typography vs. design system)
+  - [x] 6.3 — UI consistency review (spacing/color/typography vs. design system)
   - [x] 6.4 — realistic demo seed script
   - [ ] 6.5 — deploy (backend + frontend + Supabase)
   - [ ] 6.6 — README polish + short demo video
