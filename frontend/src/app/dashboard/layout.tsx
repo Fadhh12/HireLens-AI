@@ -3,8 +3,17 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { MenuIcon, XIcon } from "lucide-react";
+import {
+  Briefcase,
+  History,
+  LayoutDashboard,
+  MenuIcon,
+  UserCog,
+  Users,
+  XIcon,
+} from "lucide-react";
 
+import { Logomark } from "@/components/logomark";
 import { RequireAuth } from "@/components/require-auth";
 import { Button } from "@/components/ui/button";
 import { logout as logoutApi } from "@/lib/auth/api";
@@ -14,6 +23,7 @@ import type { UserRole } from "@/lib/auth/types";
 interface NavItem {
   label: string;
   href: string;
+  icon: typeof LayoutDashboard;
   roles?: UserRole[];
   available: boolean;
 }
@@ -22,16 +32,17 @@ interface NavItem {
 // Management are actually built in Phase 1; the rest are shown so the
 // product's shape is visible early, but marked "Segera" until their phase.
 const NAV_ITEMS: NavItem[] = [
-  { label: "Ringkasan", href: "/dashboard", available: true },
-  { label: "Lowongan", href: "/dashboard/jobs", roles: ["admin", "recruiter"], available: true },
+  { label: "Ringkasan", href: "/dashboard", icon: LayoutDashboard, available: true },
+  { label: "Lowongan", href: "/dashboard/jobs", icon: Briefcase, roles: ["admin", "recruiter"], available: true },
   {
     label: "Kandidat",
     href: "/dashboard/candidates",
+    icon: Users,
     roles: ["admin", "recruiter", "hiring_manager"],
     available: false,
   },
-  { label: "Log Aktivitas", href: "/dashboard/activity", roles: ["admin"], available: true },
-  { label: "Manajemen User", href: "/dashboard/users", roles: ["admin"], available: true },
+  { label: "Log Aktivitas", href: "/dashboard/activity", icon: History, roles: ["admin"], available: true },
+  { label: "Manajemen User", href: "/dashboard/users", icon: UserCog, roles: ["admin"], available: true },
 ];
 
 const ROLE_LABEL: Record<UserRole, string> = {
@@ -40,6 +51,11 @@ const ROLE_LABEL: Record<UserRole, string> = {
   hiring_manager: "Hiring Manager",
   interviewer: "Interviewer",
 };
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -70,8 +86,11 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   const sidebarContent = (
     <>
-      <div className="mb-4 flex items-center justify-between px-2">
-        <p className="font-heading text-base font-medium">HireLens AI</p>
+      <div className="mb-5 flex items-center justify-between px-2">
+        <div className="flex items-center gap-2.5">
+          <Logomark />
+          <p className="font-heading text-base font-medium">HireLens AI</p>
+        </div>
         <button
           type="button"
           className="text-sidebar-foreground/70 md:hidden"
@@ -90,7 +109,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               key={item.href}
               className="text-sidebar-foreground/40 flex items-center justify-between rounded-md px-3 py-2 text-sm"
             >
-              {item.label}
+              <span className="flex items-center gap-2.5">
+                <item.icon className="size-4" strokeWidth={1.75} />
+                {item.label}
+              </span>
               <span className="text-[10px] tracking-wide uppercase">Segera</span>
             </span>
           );
@@ -100,12 +122,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             key={item.href}
             href={item.href}
             onClick={() => setMobileNavOpen(false)}
-            className={`rounded-md px-3 py-2 text-sm transition-colors ${
+            className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
               active
                 ? "bg-sidebar-accent text-sidebar-accent-foreground"
                 : "hover:bg-sidebar-accent/60 text-sidebar-foreground/90"
             }`}
           >
+            <item.icon className="size-4" strokeWidth={1.75} />
             {item.label}
           </Link>
         );
@@ -146,9 +169,14 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           <div className="hidden md:block" />
           <div className="flex items-center gap-3">
             {user && (
-              <div className="hidden text-right sm:block">
-                <p className="text-sm leading-tight font-medium">{user.name}</p>
-                <p className="caption leading-tight">{ROLE_LABEL[user.role]}</p>
+              <div className="flex items-center gap-2.5">
+                <div className="hidden text-right sm:block">
+                  <p className="text-sm leading-tight font-medium">{user.name}</p>
+                  <p className="caption leading-tight">{ROLE_LABEL[user.role]}</p>
+                </div>
+                <span className="bg-secondary text-primary flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-medium">
+                  {initials(user.name)}
+                </span>
               </div>
             )}
             <Button variant="outline" size="sm" onClick={handleLogout}>

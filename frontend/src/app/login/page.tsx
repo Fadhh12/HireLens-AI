@@ -9,6 +9,7 @@ import { ApiError } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Logomark } from "@/components/logomark";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,7 +48,10 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="border-border bg-card w-full max-w-sm rounded-xl border p-8 shadow-sm">
-        <h1 className="mb-1">HireLens AI</h1>
+        <div className="mb-1 flex items-center gap-2.5">
+          <Logomark />
+          <h1>HireLens AI</h1>
+        </div>
         <p className="caption mb-6">Masuk untuk melanjutkan ke dashboard.</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
