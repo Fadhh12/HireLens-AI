@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { MATCH_LABEL_TEXT } from "@/components/candidates/match-label-badge";
 import { DonutChart } from "@/components/charts/donut-chart";
-import { listCandidates } from "@/lib/candidates/api";
+import { listAllCandidates, listCandidates } from "@/lib/candidates/api";
 import type { MatchLabel } from "@/lib/candidates/types";
 import { useAuthStore } from "@/lib/auth/store";
 import { listJobs } from "@/lib/jobs/api";
@@ -37,11 +37,13 @@ export default function DashboardOverviewPage() {
   });
   const [newThisWeek, setNewThisWeek] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [toInterviewCount, setToInterviewCount] = useState(0);
 
   // UI/UX Flow §3 Screen 2: Admin, Recruiter, Hiring Manager (Task 6.3 finding —
   // hiring_manager was missing, leaving them with a blank overview and no way to
   // reach the ranking dashboard from here).
   const canSeeJobs = user?.role === "admin" || user?.role === "recruiter" || user?.role === "hiring_manager";
+  const isInterviewer = user?.role === "interviewer";
 
   useEffect(() => {
     if (!canSeeJobs) {
@@ -71,15 +73,43 @@ export default function DashboardOverviewPage() {
       .finally(() => setLoading(false));
   }, [canSeeJobs]);
 
+  useEffect(() => {
+    if (!isInterviewer) return;
+    listAllCandidates()
+      .then((candidates) => {
+        setToInterviewCount(
+          candidates.filter((c) => c.status === "shortlisted" || c.status === "interviewed").length
+        );
+      })
+      .catch(() => setToInterviewCount(0))
+      .finally(() => setLoading(false));
+  }, [isInterviewer]);
+
   const totalLabeled = labelCounts.strong_match + labelCounts.consider + labelCounts.not_a_fit;
 
   return (
     <div className="space-y-6">
       <h1>Selamat datang, {user?.name?.split(" ")[0]}</h1>
 
-      {!canSeeJobs && (
+      {isInterviewer && (
+        <section className="border-border bg-card space-y-3 rounded-lg border p-4">
+          <p className="caption">Kandidat siap di-interview</p>
+          <p className="tabular-score text-2xl">{toInterviewCount}</p>
+          <p className="text-ink-600 text-sm">
+            Buka menu Kandidat untuk mencari kandidat, lalu buka Interview Guide dari halaman detailnya.
+          </p>
+          <Link
+            href="/dashboard/candidates"
+            className="border-border bg-background hover:bg-muted inline-flex h-8 items-center rounded-lg border px-3 text-sm"
+          >
+            Lihat Kandidat
+          </Link>
+        </section>
+      )}
+
+      {!canSeeJobs && !isInterviewer && (
         <p className="text-ink-600 max-w-xl text-sm">
-          Ringkasan job & kandidat tersedia untuk role Admin/Recruiter.
+          Ringkasan job & kandidat tersedia untuk role Admin/Recruiter/Hiring Manager.
         </p>
       )}
 

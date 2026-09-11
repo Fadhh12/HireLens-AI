@@ -61,10 +61,11 @@ const LABEL_FILTERS: MatchLabel[] = ["strong_match", "consider", "not_a_fit"];
 type SortKey = "applied_desc" | "score_desc" | "name_asc";
 
 export default function GlobalCandidatesPage() {
-  // Same role scope as the per-job Ranking Dashboard — cross-job view of
-  // the same data, not new access.
+  // Same role scope as the per-job Ranking Dashboard, plus interviewer —
+  // otherwise they have no way to find a candidate to interview except a
+  // direct link someone else sends them (backend now allows this too).
   return (
-    <RequireAuth allowedRoles={["admin", "recruiter", "hiring_manager"]}>
+    <RequireAuth allowedRoles={["admin", "recruiter", "hiring_manager", "interviewer"]}>
       <GlobalCandidatesContent />
     </RequireAuth>
   );

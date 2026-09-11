@@ -38,7 +38,10 @@ const NAV_ITEMS: NavItem[] = [
     label: "Kandidat",
     href: "/dashboard/candidates",
     icon: Users,
-    roles: ["admin", "recruiter", "hiring_manager"],
+    // Interviewer included so they have a way to find a candidate to
+    // interview at all — previously only reachable via a direct link
+    // someone else sent them (backend GET /candidates now allows it too).
+    roles: ["admin", "recruiter", "hiring_manager", "interviewer"],
     available: true,
   },
   { label: "Log Aktivitas", href: "/dashboard/activity", icon: History, roles: ["admin"], available: true },
