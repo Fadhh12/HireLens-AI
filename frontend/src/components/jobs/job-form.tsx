@@ -106,7 +106,7 @@ export function JobForm({ initialJob }: JobFormProps) {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="space-y-6">
       {isClosed && (
         <p className="text-danger-700 bg-danger-100 rounded-md px-3 py-2 text-sm">
           Job posting ini sudah <strong>closed</strong> — kriteria & data tidak bisa diedit lagi
