@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { RequireAuth } from "@/components/require-auth";
@@ -25,8 +26,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ApiError } from "@/lib/api/client";
+import { useAuthStore } from "@/lib/auth/store";
 import { listAllCandidates } from "@/lib/candidates/api";
 import type { CandidateGlobalListItem, CandidateStatus, MatchLabel } from "@/lib/candidates/types";
+import { listJobs } from "@/lib/jobs/api";
+import type { JobPosting } from "@/lib/jobs/types";
 
 // Same status vocabulary/coloring as the per-job Ranking Dashboard
 // (dashboard/jobs/[id]/candidates/page.tsx) — kept in sync deliberately,
@@ -67,6 +71,12 @@ export default function GlobalCandidatesPage() {
 }
 
 function GlobalCandidatesContent() {
+  const router = useRouter();
+  // Same role scope as the per-job Ranking Dashboard's "+ Tambah Kandidat"
+  // (intake is admin/recruiter only, mirroring the backend's own check).
+  const role = useAuthStore((s) => s.user?.role);
+  const canIntake = role === "admin" || role === "recruiter";
+
   const [candidates, setCandidates] = useState<CandidateGlobalListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,12 +87,25 @@ function GlobalCandidatesContent() {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("applied_desc");
 
+  // Active jobs to intake a candidate into — fetched separately from the
+  // candidate list so a job with zero candidates yet still shows up here
+  // (the jobOptions filter below only knows about jobs that already have one).
+  const [activeJobs, setActiveJobs] = useState<JobPosting[]>([]);
+  const [intakeJobId, setIntakeJobId] = useState<string>("");
+
   useEffect(() => {
     listAllCandidates()
       .then(setCandidates)
       .catch((err) => setError(err instanceof ApiError ? String(err.detail) : "Gagal memuat data"))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!canIntake) return;
+    listJobs("active")
+      .then(setActiveJobs)
+      .catch(() => setActiveJobs([]));
+  }, [canIntake]);
 
   const jobOptions = useMemo(() => {
     const seen = new Map<string, string>();
@@ -126,9 +149,41 @@ function GlobalCandidatesContent() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1>Kandidat</h1>
-        <p className="caption">{candidates.length} kandidat di semua job</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1>Kandidat</h1>
+          <p className="caption">{candidates.length} kandidat di semua job</p>
+        </div>
+        {canIntake && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={intakeJobId} onValueChange={(v) => setIntakeJobId(v ?? "")}>
+              <SelectTrigger className="w-48">
+                <SelectValue>
+                  {activeJobs.find((j) => j.id === intakeJobId)?.title ?? "Pilih job tujuan"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {activeJobs.length === 0 && (
+                  <SelectItem value="__none" disabled>
+                    Tidak ada job aktif
+                  </SelectItem>
+                )}
+                {activeJobs.map((j) => (
+                  <SelectItem key={j.id} value={j.id}>
+                    {j.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              disabled={!intakeJobId}
+              onClick={() => router.push(`/dashboard/jobs/${intakeJobId}/candidates/new`)}
+              title={!intakeJobId ? "Pilih job tujuan dulu" : undefined}
+            >
+              + Tambah Kandidat
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
