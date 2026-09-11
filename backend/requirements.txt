@@ -15,7 +15,7 @@ psycopg2-binary==2.9.10
 # passlib is unmaintained and broken with bcrypt>=4.1 (crashes on hash());
 # using the `bcrypt` package directly instead (see app/core/security.py).
 bcrypt==5.0.0
-pyjwt==2.10.1
+pyjwt[crypto]==2.13.0
 
 # --- Object storage (Supabase) ---
 # 2.11.0's client only accepted legacy JWT-format keys and rejected
