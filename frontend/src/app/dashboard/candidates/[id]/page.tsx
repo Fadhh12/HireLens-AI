@@ -8,6 +8,7 @@ import Link from "next/link";
 
 import { RequireAuth } from "@/components/require-auth";
 import { BackButton } from "@/components/back-button";
+import { InterviewScheduleSection } from "@/components/candidates/interview-schedule-section";
 import { MatchLabelBadge } from "@/components/candidates/match-label-badge";
 import { ScoreBreakdownBar } from "@/components/candidates/score-breakdown-bar";
 import { TagInput } from "@/components/tag-input";
@@ -36,6 +37,11 @@ import { useAuthStore } from "@/lib/auth/store";
 
 // UI/UX Layar 7: Interview Guide tab appears once shortlisted+.
 const INTERVIEW_GUIDE_ELIGIBLE: CandidateStatus[] = ["shortlisted", "interviewed", "hired", "rejected"];
+
+// Mirrors backend scheduling/service.py's _SCHEDULABLE_STATUSES — narrower
+// than the guide-eligible set above since scheduling a *new* interview for
+// an already hired/rejected candidate wouldn't make sense.
+const INTERVIEW_SCHEDULABLE: CandidateStatus[] = ["shortlisted", "interviewed"];
 
 const STATUS_LABEL: Record<CandidateStatus, string> = {
   new: "Baru",
@@ -277,6 +283,10 @@ function CandidateDetailContent() {
               </div>
               <p className="caption">Model: {score.model_version}</p>
             </section>
+          )}
+
+          {canChangeStatus && INTERVIEW_SCHEDULABLE.includes(candidate.status) && (
+            <InterviewScheduleSection candidateId={candidate.id} />
           )}
 
           {canChangeStatus && <StatusChangeSection candidate={candidate} onChanged={setCandidate} />}
