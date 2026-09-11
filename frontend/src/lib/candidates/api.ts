@@ -1,7 +1,13 @@
 import { apiFetch, ApiError } from "@/lib/api/client";
 import { useAuthStore } from "@/lib/auth/store";
 
-import type { Candidate, CandidateCreateResponse, CandidateListItem, CandidateStatus } from "./types";
+import type {
+  Candidate,
+  CandidateCreateResponse,
+  CandidateGlobalListItem,
+  CandidateListItem,
+  CandidateStatus,
+} from "./types";
 
 export interface IntakeCandidateInput {
   full_name: string;
@@ -36,6 +42,11 @@ export function intakeCandidate(
 
 export function listCandidates(jobId: string): Promise<CandidateListItem[]> {
   return apiFetch<CandidateListItem[]>(`/jobs/${jobId}/candidates`);
+}
+
+/** GET /candidates (cross-job) — the "Kandidat" sidebar screen. */
+export function listAllCandidates(): Promise<CandidateGlobalListItem[]> {
+  return apiFetch<CandidateGlobalListItem[]>(`/candidates`);
 }
 
 export function getCandidate(id: string): Promise<Candidate> {

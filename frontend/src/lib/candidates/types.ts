@@ -53,4 +53,10 @@ export interface CandidateCreateResponse extends Candidate {
   duplicate_warning: boolean;
 }
 
+/** GET /candidates (cross-job) — CandidateListItem + the job's title,
+ * since this list isn't scoped to one job's page anymore. */
+export interface CandidateGlobalListItem extends CandidateListItem {
+  job_title: string;
+}
+
 export type MatchLabel = "strong_match" | "consider" | "not_a_fit";
