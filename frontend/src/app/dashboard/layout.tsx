@@ -39,7 +39,7 @@ const NAV_ITEMS: NavItem[] = [
     href: "/dashboard/candidates",
     icon: Users,
     roles: ["admin", "recruiter", "hiring_manager"],
-    available: false,
+    available: true,
   },
   { label: "Log Aktivitas", href: "/dashboard/activity", icon: History, roles: ["admin"], available: true },
   { label: "Manajemen User", href: "/dashboard/users", icon: UserCog, roles: ["admin"], available: true },
