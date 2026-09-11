@@ -117,6 +117,23 @@ representative demo. Prints each seeded login on completion; the bootstrap
 Admin account (`scripts/create_admin.py`) works too. Parsing and scoring
 are called synchronously in the script, no background worker needed.
 
+## Deployment
+
+| Layer | Platform | Live URL |
+|---|---|---|
+| Backend | [FastAPI Cloud](https://fastapicloud.com) | https://hirelens-ai.fastapicloud.dev (docs at `/docs`) |
+| Frontend | [Vercel](https://vercel.com) | https://hirelens-ai-frontend-ivory.vercel.app |
+| Database / Storage | [Supabase](https://supabase.com) | — |
+
+Both platforms auto-deploy on push to `main` (Vercel's root directory is
+set to `frontend/` since this is a monorepo; FastAPI Cloud builds
+`backend/` and auto-discovers `app.main:app`). `backend/requirements.txt`
+pins `fastapi[standard]` — FastAPI Cloud always starts the app via
+`fastapi run`, which needs the `fastapi-cli` bundled by that extra; the
+bare `fastapi` package doesn't ship it and the app crash-loops without it.
+`render.yaml` and `backend/Procfile` are leftover from an earlier
+Railway/Render plan and are unused by the current FastAPI Cloud deploy.
+
 ## Status
 
 Phase 6 of 6 in progress (polish, tests, deploy). See
@@ -133,7 +150,7 @@ Phase 6 of 6 in progress (polish, tests, deploy). See
   - [x] 6.2 — unit tests for the scoring logic (`matching_engine/scoring.py`), 100% line coverage
   - [x] 6.3 — UI consistency review (spacing/color/typography vs. design system)
   - [x] 6.4 — realistic demo seed script
-  - [ ] 6.5 — deploy (backend + frontend + Supabase)
+  - [x] 6.5 — deploy (backend on FastAPI Cloud, frontend on Vercel, DB on Supabase)
   - [ ] 6.6 — README polish + short demo video
   - [ ] 6.7 — portfolio case study write-up
 
