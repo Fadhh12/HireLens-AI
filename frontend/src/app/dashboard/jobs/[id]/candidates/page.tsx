@@ -5,7 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { RequireAuth } from "@/components/require-auth";
+import { BackButton } from "@/components/back-button";
 import { MATCH_LABEL_TEXT, MatchLabelBadge } from "@/components/candidates/match-label-badge";
+import { ScoreRing } from "@/components/candidates/score-ring";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,6 +139,7 @@ function RankingDashboardContent() {
 
   return (
     <div className="space-y-4">
+      <BackButton fallbackHref="/dashboard/jobs" />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1>{job.title}</h1>
@@ -239,8 +242,15 @@ function RankingDashboardContent() {
                   />
                 </TableCell>
                 <TableCell className="font-medium">{c.full_name}</TableCell>
-                <TableCell className="tabular-score">
-                  {c.final_score !== null ? c.final_score.toFixed(1) : <span className="text-ink-400 animate-pulse">Memproses...</span>}
+                <TableCell>
+                  {c.final_score !== null ? (
+                    <div className="flex items-center gap-2.5">
+                      <ScoreRing score={c.final_score} label={c.label} />
+                      <span className="tabular-score">{c.final_score.toFixed(1)}</span>
+                    </div>
+                  ) : (
+                    <span className="text-ink-400 animate-pulse">Memproses...</span>
+                  )}
                 </TableCell>
                 <TableCell>{c.label && <MatchLabelBadge label={c.label} />}</TableCell>
                 <TableCell>

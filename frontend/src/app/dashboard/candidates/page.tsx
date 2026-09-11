@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { RequireAuth } from "@/components/require-auth";
 import { MATCH_LABEL_TEXT, MatchLabelBadge } from "@/components/candidates/match-label-badge";
+import { ScoreRing } from "@/components/candidates/score-ring";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -219,8 +220,15 @@ function GlobalCandidatesContent() {
                     {c.job_title}
                   </Link>
                 </TableCell>
-                <TableCell className="tabular-score">
-                  {c.final_score !== null ? c.final_score.toFixed(1) : <span className="text-ink-400 animate-pulse">Memproses...</span>}
+                <TableCell>
+                  {c.final_score !== null ? (
+                    <div className="flex items-center gap-2.5">
+                      <ScoreRing score={c.final_score} label={c.label} />
+                      <span className="tabular-score">{c.final_score.toFixed(1)}</span>
+                    </div>
+                  ) : (
+                    <span className="text-ink-400 animate-pulse">Memproses...</span>
+                  )}
                 </TableCell>
                 <TableCell>{c.label && <MatchLabelBadge label={c.label} />}</TableCell>
                 <TableCell>
