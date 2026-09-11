@@ -122,7 +122,7 @@ are called synchronously in the script, no background worker needed.
 | Layer | Platform | Live URL |
 |---|---|---|
 | Backend | [FastAPI Cloud](https://fastapicloud.com) | https://hirelens-ai.fastapicloud.dev (docs at `/docs`) |
-| Frontend | [Vercel](https://vercel.com) | https://hirelens-ai-frontend-ivory.vercel.app |
+| Frontend | [Vercel](https://vercel.com) | https://hirelens-ai-app.vercel.app |
 | Database / Storage | [Supabase](https://supabase.com) | — |
 
 Both platforms auto-deploy on push to `main` (Vercel's root directory is
