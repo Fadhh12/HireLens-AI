@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ApiError } from "@/lib/api/client";
+import { useAuthStore } from "@/lib/auth/store";
 import {
   finalizeGuide,
   listGuideVersions,
@@ -28,8 +29,14 @@ const POLL_INTERVAL_MS = 2500;
 const POLL_TIMEOUT_MS = 30000;
 
 export default function InterviewGuidePage() {
+  // GET (view) is open to any role that can already reach a candidate's
+  // page (backend's own guide router only gates generate/update/finalize
+  // to admin/interviewer — see interview/router.py) — this used to block
+  // the whole page for recruiter/hiring_manager, same bug class as the
+  // Task 6.3 RequireAuth findings on other pages. Manage actions are
+  // gated per-section below (canManage) instead of at the page level.
   return (
-    <RequireAuth allowedRoles={["admin", "interviewer"]}>
+    <RequireAuth allowedRoles={["admin", "recruiter", "hiring_manager", "interviewer"]}>
       <InterviewGuideContent />
     </RequireAuth>
   );
@@ -37,6 +44,10 @@ export default function InterviewGuidePage() {
 
 function InterviewGuideContent() {
   const params = useParams<{ id: string }>();
+  const role = useAuthStore((s) => s.user?.role);
+  // Mirrors the backend's require_role("admin", "interviewer") on
+  // generate/update/finalize — recruiter/hiring_manager get read-only access.
+  const canManage = role === "admin" || role === "interviewer";
   const [versions, setVersions] = useState<InterviewGuide[]>([]);
   const [selected, setSelected] = useState<InterviewGuide | null>(null);
   const [loading, setLoading] = useState(true);
@@ -168,9 +179,11 @@ function InterviewGuideContent() {
               </SelectContent>
             </Select>
           )}
-          <Button onClick={handleGenerate} disabled={generating}>
-            {generating ? "Menyusun..." : versions.length > 0 ? "Generate Ulang" : "Generate Pertanyaan"}
-          </Button>
+          {canManage && (
+            <Button onClick={handleGenerate} disabled={generating}>
+              {generating ? "Menyusun..." : versions.length > 0 ? "Generate Ulang" : "Generate Pertanyaan"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -180,7 +193,9 @@ function InterviewGuideContent() {
 
       {!generating && versions.length === 0 && (
         <p className="text-ink-400 text-sm">
-          Belum ada interview guide. Klik &quot;Generate Pertanyaan&quot; untuk membuatnya.
+          {canManage
+            ? 'Belum ada interview guide. Klik "Generate Pertanyaan" untuk membuatnya.'
+            : "Belum ada interview guide untuk kandidat ini."}
         </p>
       )}
 
@@ -192,22 +207,22 @@ function InterviewGuideContent() {
             label="Pertanyaan Teknikal"
             items={technical}
             onChange={setTechnical}
-            readOnly={selected.is_final}
+            readOnly={selected.is_final || !canManage}
           />
           <QuestionList
             label="Pertanyaan Behavioral"
             items={behavioral}
             onChange={setBehavioral}
-            readOnly={selected.is_final}
+            readOnly={selected.is_final || !canManage}
           />
           <QuestionList
             label="Area yang Perlu Digali"
             items={riskAreas}
             onChange={setRiskAreas}
-            readOnly={selected.is_final}
+            readOnly={selected.is_final || !canManage}
           />
 
-          {!selected.is_final && (
+          {!selected.is_final && canManage && (
             <div className="flex items-center gap-3">
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? "Menyimpan..." : "Simpan Perubahan"}
