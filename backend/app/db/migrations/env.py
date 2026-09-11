@@ -23,6 +23,7 @@ from app.modules.candidates import model as candidates_model  # noqa: F401, E402
 from app.modules.matching_engine import model as matching_engine_model  # noqa: F401, E402
 from app.modules.interview import model as interview_model  # noqa: F401, E402
 from app.modules.activity_log import model as activity_log_model  # noqa: F401, E402
+from app.modules.scheduling import model as scheduling_model  # noqa: F401, E402
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

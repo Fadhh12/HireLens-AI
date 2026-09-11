@@ -56,6 +56,20 @@ class Settings(BaseSettings):
     # user. Empty by default so the endpoint 503s until deliberately configured.
     public_apply_api_key: str = ""
 
+    # --- Frontend base URL (OAuth redirects land the browser back here) ---
+    frontend_url: str = "http://localhost:3000"
+
+    # --- Google Calendar integration (interview scheduling) ---
+    # From a Google Cloud project's OAuth client (Web application type) —
+    # see app/modules/scheduling/google_client.py's docstring. Empty by
+    # default so /integrations/google/* 503s until configured, same
+    # pattern as public_apply_api_key above.
+    google_oauth_client_id: str = ""
+    google_oauth_client_secret: str = ""
+    # Must exactly match a redirect URI registered on that OAuth client,
+    # and point at this backend's own /integrations/google/callback route.
+    google_oauth_redirect_uri: str = "http://localhost:8000/api/v1/integrations/google/callback"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

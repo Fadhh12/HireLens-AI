@@ -12,6 +12,7 @@ from app.modules.auth.router import users_router
 from app.modules.candidates.router import router as candidates_router
 from app.modules.interview.router import router as interview_router
 from app.modules.jobs.router import router as jobs_router
+from app.modules.scheduling.router import router as scheduling_router
 
 settings = get_settings()
 
@@ -42,3 +43,4 @@ app.include_router(jobs_router, prefix=api_prefix)
 app.include_router(candidates_router, prefix=api_prefix)
 app.include_router(interview_router, prefix=api_prefix)
 app.include_router(activity_log_router, prefix=api_prefix)
+app.include_router(scheduling_router, prefix=api_prefix)
