@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 
 import { RequireAuth } from "@/components/require-auth";
+import { BackButton } from "@/components/back-button";
 import { MatchLabelBadge } from "@/components/candidates/match-label-badge";
 import { ScoreBreakdownBar } from "@/components/candidates/score-breakdown-bar";
 import { TagInput } from "@/components/tag-input";
@@ -161,6 +162,7 @@ function CandidateDetailContent() {
 
   return (
     <div className="max-w-5xl space-y-6">
+      <BackButton fallbackHref="/dashboard/candidates" />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1>{candidate.full_name}</h1>
