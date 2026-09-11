@@ -192,6 +192,20 @@ def update_status(
         old_value=old_status,
         new_value=f"{new_status.value} (alasan: {reason})",
     )
+
+    # Not part of the original SDD — a later feature request: shortlisted/
+    # rejected/hired each auto-send a templated email (see messaging/).
+    # "interviewed" is deliberately excluded, that transition already gets
+    # the Calendar invite from scheduling/service.py's own flow. Local
+    # import to avoid a module-load-order cycle (messaging imports
+    # candidates.model), and best-effort so a Google/Gmail hiccup never
+    # breaks the status change itself.
+    from app.modules.messaging.model import EmailTrigger
+    from app.modules.messaging.service import send_status_email_best_effort
+
+    if new_status.value in (EmailTrigger.shortlisted, EmailTrigger.rejected, EmailTrigger.hired):
+        send_status_email_best_effort(db, candidate, EmailTrigger(new_status.value), actor_id=actor.id)
+
     return candidate
 
 

@@ -1,18 +1,29 @@
-"""Thin wrapper around Google's OAuth + Calendar API — isolates every bit
-of google-auth-oauthlib/google-api-python-client usage in one file, the
-same way llm_assist.py isolates the Gemini SDK from the rest of the app.
+"""Thin wrapper around Google's OAuth + Calendar/Gmail APIs — isolates
+every bit of google-auth-oauthlib/google-api-python-client usage in one
+file, the same way llm_assist.py isolates the Gemini SDK from the rest
+of the app.
 
 Requires GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET /
 GOOGLE_OAUTH_REDIRECT_URI (see app/core/config.py) — these come from a
 Google Cloud project the user creates themselves (OAuth consent screen +
-a Web application OAuth client with the Calendar API enabled). Every
-function here raises GoogleCalendarError on failure so callers
-(service.py) can turn it into a clean HTTP error instead of a raw
-googleapiclient traceback.
+a Web application OAuth client with the Calendar API and Gmail API both
+enabled). Every function here raises GoogleCalendarError on failure so
+callers (service.py) can turn it into a clean HTTP error instead of a
+raw googleapiclient traceback.
+
+gmail.send/gmail.readonly were added after calendar.events was already
+shipped (see messaging/ module) — an account connected before that
+addition only granted the old, narrower scope, so it must reconnect
+("Hubungkan Google Calendar") to pick up email sending/reply-detection;
+there's no way to silently widen an already-issued grant.
 """
 
+import base64
 import uuid
 from datetime import datetime, timedelta, timezone
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from google.oauth2.credentials import Credentials
@@ -23,10 +34,14 @@ from googleapiclient.errors import HttpError
 
 from app.core.config import get_settings
 
-# calendar.events (create/manage events) + openid/email (identify which
-# Google account got connected, shown back to the recruiter in the UI).
+# calendar.events (create/manage events), gmail.send (status-change
+# notifications), gmail.readonly (detect a candidate's reply in that
+# thread — see messaging/service.py's poll_replies), openid/email
+# (identify which Google account got connected, shown in the UI).
 SCOPES = [
     "https://www.googleapis.com/auth/calendar.events",
+    "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/gmail.readonly",
     "openid",
     "email",
 ]
@@ -191,3 +206,70 @@ def create_interview_event(
 
 def default_interview_window(scheduled_at: datetime, duration_minutes: int) -> tuple[datetime, datetime]:
     return scheduled_at, scheduled_at + timedelta(minutes=duration_minutes)
+
+
+class SentEmail:
+    def __init__(self, message_id: str, thread_id: str):
+        self.message_id = message_id
+        self.thread_id = thread_id
+
+
+def send_email(
+    refresh_token: str,
+    to: str,
+    subject: str,
+    body_text: str,
+    attachment: tuple[str, str, bytes] | None = None,
+) -> SentEmail:
+    """Sends from the connected recruiter's own Gmail — replies land in
+    their real inbox, which is what makes poll-for-replies below work.
+    `attachment` is (filename, mime_type, content) — the optional
+    assessment/contract PDF an HR can attach when re-sending (see
+    messaging/router.py's send endpoint)."""
+    _require_configured()
+    creds = _credentials_from_refresh_token(refresh_token)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+
+    message = MIMEMultipart() if attachment else MIMEText(body_text)
+    if attachment:
+        message.attach(MIMEText(body_text))
+        filename, mime_type, content = attachment
+        maintype, _, subtype = mime_type.partition("/")
+        part = MIMEApplication(content, _subtype=subtype or "octet-stream")
+        part.add_header("Content-Disposition", "attachment", filename=filename)
+        message.attach(part)
+    message["to"] = to
+    message["subject"] = subject
+
+    raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+    try:
+        sent = service.users().messages().send(userId="me", body={"raw": raw}).execute()
+    except HttpError as exc:
+        raise GoogleCalendarError(f"Gmail menolak permintaan kirim: {exc}") from exc
+
+    return SentEmail(message_id=sent["id"], thread_id=sent["threadId"])
+
+
+def thread_has_reply(refresh_token: str, thread_id: str, our_message_id: str) -> str | None:
+    """Returns the latest reply's snippet if the thread has any message
+    besides the one we sent (our_message_id), else None. Used by
+    messaging/service.py's periodic poll_replies — there's no push
+    notification path here (would need a Cloud Pub/Sub topic + a
+    publicly reachable webhook, more GCP setup than this project
+    assumes), so replies show up on the next poll instead of instantly.
+    """
+    _require_configured()
+    creds = _credentials_from_refresh_token(refresh_token)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+
+    try:
+        thread = service.users().threads().get(userId="me", id=thread_id, format="metadata").execute()
+    except HttpError as exc:
+        raise GoogleCalendarError(f"Gagal membaca thread Gmail: {exc}") from exc
+
+    messages = thread.get("messages", [])
+    others = [m for m in messages if m.get("id") != our_message_id]
+    if not others:
+        return None
+    latest = others[-1]
+    return latest.get("snippet", "") or "(tidak ada isi ringkas)"
