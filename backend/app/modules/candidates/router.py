@@ -14,6 +14,7 @@ from app.modules.candidates import service
 from app.modules.candidates.model import Candidate
 from app.modules.candidates.schema import (
     CandidateCreateResponse,
+    CandidateGlobalListItemOut,
     CandidateIntakeForm,
     CandidateListItemOut,
     CandidateOut,
@@ -175,6 +176,34 @@ def list_candidates(
         )
     # FR-6.1: default sort highest score first; unscored candidates last.
     items.sort(key=lambda i: (i.final_score is None, -(i.final_score or 0)))
+    return items
+
+
+@router.get("/candidates", response_model=list[CandidateGlobalListItemOut])
+def list_all_candidates(
+    job_id: uuid.UUID | None = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_role("admin", "recruiter", "hiring_manager")),
+) -> list[CandidateGlobalListItemOut]:
+    """Cross-job candidate list (Kandidat screen) — same role scope as the
+    per-job Ranking Dashboard, since it's the same data just unfiltered by job."""
+    pairs = service.list_all_candidates(db, job_id)
+    scores = matching_service.get_latest_scores_for_job(db, [c.id for c, _ in pairs])
+
+    items = []
+    for c, job_title in pairs:
+        base = CandidateOut.model_validate(c).model_dump()
+        score = scores.get(c.id)
+        items.append(
+            CandidateGlobalListItemOut(
+                **base,
+                job_title=job_title,
+                final_score=float(score.final_score) if score else None,
+                label=score.label.value if score else None,
+                score_computed_at=score.computed_at if score else None,
+            )
+        )
+    items.sort(key=lambda i: i.applied_at, reverse=True)
     return items
 
 

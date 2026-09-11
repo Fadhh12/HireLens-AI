@@ -17,6 +17,7 @@ from app.modules.auth.model import User
 from app.modules.candidates.model import Candidate, CandidateStatus
 from app.modules.candidates.schema import CandidateUpdate
 from app.modules.document_ai.parser import ParsedProfile
+from app.modules.jobs.model import JobPosting
 
 # --- SRS §4 validation constants ---
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
@@ -135,6 +136,20 @@ def list_candidates(db: Session, job_posting_id: uuid.UUID) -> list[Candidate]:
             .order_by(Candidate.applied_at.desc())
         )
     )
+
+
+def list_all_candidates(db: Session, job_posting_id: uuid.UUID | None = None) -> list[tuple[Candidate, str]]:
+    """Cross-job candidate list for the global "Kandidat" screen — pairs
+    each candidate with its job's title so the table doesn't need one
+    lookup per row (same denormalization idea as CandidateListItemOut's
+    score)."""
+    query = select(Candidate, JobPosting.title).join(
+        JobPosting, Candidate.job_posting_id == JobPosting.id
+    )
+    if job_posting_id is not None:
+        query = query.where(Candidate.job_posting_id == job_posting_id)
+    query = query.order_by(Candidate.applied_at.desc())
+    return [(row.Candidate, row.title) for row in db.execute(query)]
 
 
 def get_candidate(db: Session, candidate_id: uuid.UUID) -> Candidate:

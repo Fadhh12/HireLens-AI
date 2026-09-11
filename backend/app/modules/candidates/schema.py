@@ -90,3 +90,10 @@ class CandidateListItemOut(CandidateOut):
     final_score: float | None = None
     label: str | None = None
     score_computed_at: datetime | None = None
+
+
+class CandidateGlobalListItemOut(CandidateListItemOut):
+    """CandidateListItemOut + the job's title, for the cross-job "Kandidat"
+    screen (no per-job scope, so the job needs naming inline)."""
+
+    job_title: str
