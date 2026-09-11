@@ -183,10 +183,14 @@ def list_candidates(
 def list_all_candidates(
     job_id: uuid.UUID | None = None,
     db: Session = Depends(get_db),
-    _: User = Depends(require_role("admin", "recruiter", "hiring_manager")),
+    _: User = Depends(require_role("admin", "recruiter", "hiring_manager", "interviewer")),
 ) -> list[CandidateGlobalListItemOut]:
     """Cross-job candidate list (Kandidat screen) — same role scope as the
-    per-job Ranking Dashboard, since it's the same data just unfiltered by job."""
+    per-job Ranking Dashboard, plus interviewer: without this they had no
+    way to find a candidate to interview at all except a direct link
+    someone else sent them (get_candidate/{id} was always open to them,
+    but nothing let them browse to it — same RequireAuth-gap class as the
+    Task 6.3 findings, just on the backend side this time)."""
     pairs = service.list_all_candidates(db, job_id)
     scores = matching_service.get_latest_scores_for_job(db, [c.id for c, _ in pairs])
 
