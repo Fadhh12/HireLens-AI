@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { MATCH_LABEL_TEXT } from "@/components/candidates/match-label-badge";
+import { DonutChart } from "@/components/charts/donut-chart";
 import { listCandidates } from "@/lib/candidates/api";
 import type { MatchLabel } from "@/lib/candidates/types";
 import { useAuthStore } from "@/lib/auth/store";
@@ -14,6 +15,12 @@ const LABEL_BAR_CLASS: Record<MatchLabel, string> = {
   strong_match: "bg-success-700",
   consider: "bg-warning-700",
   not_a_fit: "bg-danger-700",
+};
+
+const LABEL_DONUT_COLOR: Record<MatchLabel, string> = {
+  strong_match: "--success-700",
+  consider: "--warning-700",
+  not_a_fit: "--danger-700",
 };
 
 interface JobWithCount extends JobPosting {
@@ -85,22 +92,40 @@ export default function DashboardOverviewPage() {
           </div>
 
           {totalLabeled > 0 && (
-            <section className="border-border bg-card space-y-3 rounded-lg border p-4">
+            <section className="border-border bg-card space-y-4 rounded-lg border p-4">
               <h2>Distribusi Label Kecocokan</h2>
-              {(Object.keys(labelCounts) as MatchLabel[]).map((label) => (
-                <div key={label} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>{MATCH_LABEL_TEXT[label]}</span>
-                    <span className="tabular-score">{labelCounts[label]}</span>
-                  </div>
-                  <div className="bg-muted h-2 overflow-hidden rounded-full">
-                    <div
-                      className={`h-full ${LABEL_BAR_CLASS[label]}`}
-                      style={{ width: `${(labelCounts[label] / totalLabeled) * 100}%` }}
-                    />
-                  </div>
+              <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
+                <DonutChart
+                  centerValue={String(totalLabeled)}
+                  centerLabel="kandidat"
+                  segments={(Object.keys(labelCounts) as MatchLabel[]).map((label) => ({
+                    label: MATCH_LABEL_TEXT[label],
+                    value: labelCounts[label],
+                    colorVar: LABEL_DONUT_COLOR[label],
+                  }))}
+                />
+                <div className="w-full flex-1 space-y-3">
+                  {(Object.keys(labelCounts) as MatchLabel[]).map((label) => {
+                    const pct = (labelCounts[label] / totalLabeled) * 100;
+                    return (
+                      <div key={label} className="space-y-1">
+                        <div className="flex items-center gap-2 text-sm">
+                          <span
+                            className="size-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: `var(${LABEL_DONUT_COLOR[label]})` }}
+                          />
+                          <span className="flex-1">{MATCH_LABEL_TEXT[label]}</span>
+                          <span className="tabular-score">{labelCounts[label]}</span>
+                          <span className="caption w-12 text-right">{pct.toFixed(0)}%</span>
+                        </div>
+                        <div className="bg-muted h-2 overflow-hidden rounded-full">
+                          <div className={`h-full ${LABEL_BAR_CLASS[label]}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
+              </div>
             </section>
           )}
 
@@ -108,16 +133,25 @@ export default function DashboardOverviewPage() {
             <h2>Job Aktif</h2>
             <div className="border-border bg-card divide-border divide-y rounded-lg border">
               {jobs.length === 0 && <p className="text-ink-400 p-4 text-sm">Belum ada job aktif.</p>}
-              {jobs.map((job) => (
-                <Link
-                  key={job.id}
-                  href={`/dashboard/jobs/${job.id}/candidates`}
-                  className="hover:bg-accent flex items-center justify-between p-4 text-sm"
-                >
-                  <span className="font-medium">{job.title}</span>
-                  <span className="caption">{job.candidateCount} kandidat</span>
-                </Link>
-              ))}
+              {jobs.map((job) => {
+                const maxCount = Math.max(...jobs.map((j) => j.candidateCount), 1);
+                return (
+                  <Link
+                    key={job.id}
+                    href={`/dashboard/jobs/${job.id}/candidates`}
+                    className="hover:bg-accent flex items-center gap-4 p-4 text-sm"
+                  >
+                    <span className="min-w-0 flex-1 truncate font-medium">{job.title}</span>
+                    <div className="bg-muted hidden h-1.5 w-28 shrink-0 overflow-hidden rounded-full sm:block">
+                      <div
+                        className="bg-primary h-full"
+                        style={{ width: `${(job.candidateCount / maxCount) * 100}%` }}
+                      />
+                    </div>
+                    <span className="caption w-20 shrink-0 text-right">{job.candidateCount} kandidat</span>
+                  </Link>
+                );
+              })}
             </div>
           </section>
         </>
