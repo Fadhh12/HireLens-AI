@@ -47,6 +47,7 @@ async def intake_candidate(
     assessment_input: str | None = Form(default=None),
     cv_file: UploadFile = File(...),
     certificate_files: list[UploadFile] = File(default=[]),
+    photo: UploadFile | None = File(default=None),
     db: Session = Depends(get_db),
     _: User = Depends(require_role("admin", "recruiter")),
 ) -> CandidateCreateResponse:
@@ -87,6 +88,7 @@ async def intake_candidate(
         cv_file=cv_file,
         certificate_files=certificate_files,
         assessment_input=parsed_assessment,
+        photo_file=photo,
     )
 
     # Async — parsing must never block the upload response (brief §7).

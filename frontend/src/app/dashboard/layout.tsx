@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { logout as logoutApi } from "@/lib/auth/api";
 import { useAuthStore } from "@/lib/auth/store";
 import type { UserRole } from "@/lib/auth/types";
+import { initials } from "@/lib/initials";
 
 interface NavItem {
   label: string;
@@ -63,10 +64,6 @@ const ROLE_LABEL: Record<UserRole, string> = {
   interviewer: "Interviewer",
 };
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
-}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (

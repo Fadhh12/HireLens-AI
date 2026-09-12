@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { RequireAuth } from "@/components/require-auth";
 import { BackButton } from "@/components/back-button";
+import { CandidateAvatar } from "@/components/candidates/candidate-avatar";
 import { MATCH_LABEL_TEXT, MatchLabelBadge } from "@/components/candidates/match-label-badge";
 import { ScoreRing } from "@/components/candidates/score-ring";
 import { Badge } from "@/components/ui/badge";
@@ -241,7 +242,12 @@ function RankingDashboardContent() {
                     aria-label={`Pilih ${c.full_name} untuk dibandingkan`}
                   />
                 </TableCell>
-                <TableCell className="font-medium">{c.full_name}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2.5">
+                    <CandidateAvatar name={c.full_name} photoUrl={c.photo_url} size="sm" />
+                    {c.full_name}
+                  </div>
+                </TableCell>
                 <TableCell>
                   {c.final_score !== null ? (
                     <div className="flex items-center gap-2.5">

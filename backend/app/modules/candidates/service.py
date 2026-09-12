@@ -31,6 +31,9 @@ CV_ALLOWED_CONTENT_TYPES = {
 CERTIFICATE_ALLOWED_EXTENSIONS = {"pdf", "jpg", "jpeg", "png"}
 CERTIFICATE_ALLOWED_CONTENT_TYPES = {"application/pdf", "image/jpeg", "image/png"}
 
+PHOTO_ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
+PHOTO_ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
 
 def _extension_of(filename: str) -> str:
     return filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
@@ -68,6 +71,10 @@ async def validate_certificate(file: UploadFile) -> bytes:
     )
 
 
+async def validate_photo(file: UploadFile) -> bytes:
+    return await _validate_and_read(file, PHOTO_ALLOWED_EXTENSIONS, PHOTO_ALLOWED_CONTENT_TYPES, "Foto profil")
+
+
 def find_duplicate(db: Session, job_posting_id: uuid.UUID, email: str) -> Candidate | None:
     """SRS §7 edge case: same email on the same job is a *warning*, not a
     rejection — could legitimately be a re-apply."""
@@ -87,6 +94,7 @@ async def create_candidate(
     cv_file: UploadFile,
     certificate_files: list[UploadFile],
     assessment_input: dict | None = None,
+    photo_file: UploadFile | None = None,
 ) -> tuple[Candidate, bool]:
     if len(certificate_files) > MAX_CERTIFICATE_FILES:
         raise HTTPException(
@@ -96,6 +104,7 @@ async def create_candidate(
 
     cv_content = await validate_cv(cv_file)
     certificate_contents = [(f, await validate_certificate(f)) for f in certificate_files]
+    photo_content = await validate_photo(photo_file) if photo_file is not None else None
 
     duplicate = find_duplicate(db, job_posting_id, email)
 
@@ -111,12 +120,19 @@ async def create_candidate(
         upload_file(path, content, f.content_type or "application/octet-stream")
         certificate_paths.append(path)
 
+    photo_path: str | None = None
+    if photo_file is not None and photo_content is not None:
+        photo_ext = _extension_of(photo_file.filename or "photo.jpg")
+        photo_path = f"candidates/{job_posting_id}/{candidate_id}/photo.{photo_ext}"
+        upload_file(photo_path, photo_content, photo_file.content_type or "image/jpeg")
+
     candidate = Candidate(
         id=candidate_id,
         job_posting_id=job_posting_id,
         full_name=full_name,
         email=email,
         phone=phone,
+        photo_path=photo_path,
         cv_file_url=cv_path,
         certificate_urls=certificate_paths,
         assessment_input=assessment_input,

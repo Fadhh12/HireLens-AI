@@ -16,6 +16,7 @@ export interface IntakeCandidateInput {
   cv_file: File;
   certificate_files?: File[];
   assessment_input?: Record<string, unknown>;
+  photo_file?: File;
 }
 
 export function intakeCandidate(
@@ -32,6 +33,9 @@ export function intakeCandidate(
   }
   if (input.assessment_input) {
     form.set("assessment_input", JSON.stringify(input.assessment_input));
+  }
+  if (input.photo_file) {
+    form.set("photo", input.photo_file);
   }
 
   return apiFetch<CandidateCreateResponse>(`/jobs/${jobId}/candidates`, {

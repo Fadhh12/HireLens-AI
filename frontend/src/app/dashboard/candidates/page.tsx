@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { RequireAuth } from "@/components/require-auth";
+import { CandidateAvatar } from "@/components/candidates/candidate-avatar";
 import { MATCH_LABEL_TEXT, MatchLabelBadge } from "@/components/candidates/match-label-badge";
 import { ScoreRing } from "@/components/candidates/score-ring";
 import { Badge } from "@/components/ui/badge";
@@ -270,7 +271,12 @@ function GlobalCandidatesContent() {
             )}
             {visible.map((c) => (
               <TableRow key={c.id} className="hover:bg-accent">
-                <TableCell className="font-medium">{c.full_name}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2.5">
+                    <CandidateAvatar name={c.full_name} photoUrl={c.photo_url} size="sm" />
+                    {c.full_name}
+                  </div>
+                </TableCell>
                 <TableCell>
                   <Link href={`/dashboard/jobs/${c.job_posting_id}/candidates`} className="hover:underline">
                     {c.job_title}

@@ -33,6 +33,7 @@ export interface Candidate {
   full_name: string;
   email: string;
   phone: string;
+  photo_url: string | null;
   cv_file_url: string;
   certificate_urls: string[];
   parsed_profile: ParsedProfile | null;

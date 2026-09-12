@@ -8,6 +8,7 @@ import Link from "next/link";
 
 import { RequireAuth } from "@/components/require-auth";
 import { BackButton } from "@/components/back-button";
+import { CandidateAvatar } from "@/components/candidates/candidate-avatar";
 import { CandidateEmailSection } from "@/components/candidates/candidate-email-section";
 import { InterviewScheduleSection } from "@/components/candidates/interview-schedule-section";
 import { MatchLabelBadge } from "@/components/candidates/match-label-badge";
@@ -171,11 +172,14 @@ function CandidateDetailContent() {
     <div className="max-w-5xl space-y-6">
       <BackButton fallbackHref="/dashboard/candidates" />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1>{candidate.full_name}</h1>
-          <p className="text-ink-600 text-sm">
-            {candidate.email} • {candidate.phone}
-          </p>
+        <div className="flex items-center gap-3">
+          <CandidateAvatar name={candidate.full_name} photoUrl={candidate.photo_url} size="lg" />
+          <div>
+            <h1>{candidate.full_name}</h1>
+            <p className="text-ink-600 text-sm">
+              {candidate.email} • {candidate.phone}
+            </p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {isParsing || isScoring ? (

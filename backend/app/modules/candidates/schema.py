@@ -71,6 +71,7 @@ class CandidateOut(BaseModel):
     full_name: str
     email: str
     phone: str
+    photo_url: str | None = None
     cv_file_url: str
     certificate_urls: list[str]
     parsed_profile: dict | None

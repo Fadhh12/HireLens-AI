@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { RequireAuth } from "@/components/require-auth";
+import { BackButton } from "@/components/back-button";
 import { FileDropzone } from "@/components/file-dropzone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ function CandidateIntakeContent() {
   const [phone, setPhone] = useState("");
   const [cvFiles, setCvFiles] = useState<File[]>([]);
   const [certFiles, setCertFiles] = useState<File[]>([]);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [mbti, setMbti] = useState("");
   const [scores, setScores] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +61,7 @@ function CandidateIntakeContent() {
         phone,
         cv_file: cvFiles[0],
         certificate_files: certFiles,
+        photo_file: photoFiles[0],
         assessment_input: hasAssessment
           ? { mbti: mbti.trim() || null, competency_scores: scores }
           : undefined,
@@ -78,9 +81,18 @@ function CandidateIntakeContent() {
 
   return (
     <div className="max-w-xl space-y-6">
+      <BackButton fallbackHref={`/dashboard/jobs/${params.id}/candidates`} />
       <h1>Tambah Kandidat</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        <FileDropzone
+          label="Foto Profil (opsional)"
+          accept=".jpg,.jpeg,.png,.webp"
+          hint="JPG/PNG/WEBP, maks 5MB — ditampilkan di daftar & detail kandidat"
+          files={photoFiles}
+          onChange={setPhotoFiles}
+        />
+
         <FileDropzone
           label="CV Kandidat *"
           accept=".pdf,.docx"
