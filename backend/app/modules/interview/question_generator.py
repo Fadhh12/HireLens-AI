@@ -48,22 +48,41 @@ def generate_interview_guide(candidate: Candidate, job: JobPosting, score_breakd
         ((score_breakdown or {}).get("skill_fit") or {}).get("missing_required") or []
     )
 
-    prompt = f"""Kamu adalah asisten interviewer teknis. Berdasarkan profil kandidat dan kebutuhan job berikut,
-buat panduan wawancara dalam format JSON (HANYA JSON, tanpa markdown/teks lain) dengan struktur persis:
+    prompt = f"""Kamu adalah senior technical interviewer dengan pengalaman 10+ tahun merekrut untuk peran {job.title}.
+Tugasmu: susun panduan wawancara yang TAJAM dan SPESIFIK untuk kandidat ini — bukan pertanyaan generik yang
+bisa dipakai untuk kandidat siapa saja. Setiap pertanyaan harus merujuk konkret ke satu skill, satu proyek, atau
+satu gap yang disebutkan di bawah, seolah kamu benar-benar sudah membaca CV-nya.
+
+Ketentuan pertanyaan teknikal:
+- Minimal {MIN_QUESTIONS}, urutkan dari yang menguji pemahaman dasar ke yang menguji kedalaman/trade-off.
+- Kalau kandidat MENYEBUT sebuah skill/proyek, jangan tanya "apakah kamu bisa X" — gali kedalamannya: minta
+  jelaskan keputusan desain, trade-off yang diambil, atau bagaimana menangani kasus sulit di proyek itu.
+- Untuk tiap skill wajib job yang BELUM terdeteksi di kandidat, sertakan satu pertanyaan yang menguji apakah
+  kandidat punya fondasi transferable (bukan sekadar "kamu tahu X tidak") — lihat konteks skill lain yang
+  sudah dia kuasai untuk merumuskan pertanyaan yang adil.
+- Hindari pertanyaan ya/tidak atau definisi buku teks ("apa itu REST API").
+
+Ketentuan pertanyaan behavioral:
+- Minimal {MIN_QUESTIONS}, format STAR-friendly ("Ceritakan situasi ketika...", "Beri contoh saat...").
+- Kaitkan ke tanggung jawab nyata level {job.level.value} (mis. kolaborasi lintas tim, ambiguitas requirement,
+  tenggat ketat, konflik teknis) — bukan pertanyaan behavioral umum yang lepas dari konteks job/kandidat.
+
+risk_areas: 2-4 area konkret yang perlu divalidasi lebih dalam saat wawancara — tulis SPESIFIK ("pengalaman
+production-scale masih terbatas di proyek X", bukan "kurang pengalaman") berdasarkan gap kandidat vs job.
+
+Format output: HANYA JSON valid, tanpa markdown/code fence/teks lain, struktur persis:
 {{"technical_questions": ["...", "...", "..."], "behavioral_questions": ["...", "...", "..."], "risk_areas": ["...", "..."]}}
+Bahasa Indonesia, tiap pertanyaan siap pakai langsung oleh interviewer tanpa perlu diedit.
 
-Ketentuan:
-- Minimal {MIN_QUESTIONS} pertanyaan teknikal (spesifik ke skill & gap kandidat, bukan generik)
-- Minimal {MIN_QUESTIONS} pertanyaan behavioral
-- risk_areas: area yang perlu digali/divalidasi lebih lanjut berdasarkan gap kandidat vs job
-- Bahasa Indonesia, pertanyaan konkret dan bisa langsung dipakai interviewer
-
+=== KONTEKS ===
 Job: {job.title} ({job.level.value}), department {job.department}
 Deskripsi job: {job.description or "-"}
 Skill wajib job: {", ".join(job.required_skills) or "-"}
+Skill nice-to-have job: {", ".join(job.nice_to_have_skills) or "-"}
 Skill kandidat yang terdeteksi: {skills}
-Skill wajib yang BELUM dimiliki kandidat: {", ".join(missing_required) or "tidak ada"}
-Pengalaman kandidat: {experience}
+Skill wajib yang BELUM dimiliki kandidat: {", ".join(missing_required) or "tidak ada — kandidat memenuhi semua skill wajib"}
+Riwayat pengalaman/proyek kandidat (kutip proyek spesifik di pertanyaanmu kalau relevan):
+{experience}
 """
     try:
         response = llm.invoke(prompt)

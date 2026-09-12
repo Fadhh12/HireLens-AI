@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { RequireAuth } from "@/components/require-auth";
+import { BackButton } from "@/components/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -162,6 +163,7 @@ function InterviewGuideContent() {
 
   return (
     <div className="max-w-2xl space-y-6">
+      <BackButton fallbackHref={`/dashboard/candidates/${params.id}`} />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1>Interview Guide</h1>
         <div className="flex flex-wrap items-center gap-2">
