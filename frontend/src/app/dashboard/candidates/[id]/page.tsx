@@ -8,6 +8,7 @@ import Link from "next/link";
 
 import { RequireAuth } from "@/components/require-auth";
 import { BackButton } from "@/components/back-button";
+import { CandidateEmailSection } from "@/components/candidates/candidate-email-section";
 import { InterviewScheduleSection } from "@/components/candidates/interview-schedule-section";
 import { MatchLabelBadge } from "@/components/candidates/match-label-badge";
 import { ScoreBreakdownBar } from "@/components/candidates/score-breakdown-bar";
@@ -288,6 +289,8 @@ function CandidateDetailContent() {
           {canChangeStatus && INTERVIEW_SCHEDULABLE.includes(candidate.status) && (
             <InterviewScheduleSection candidateId={candidate.id} />
           )}
+
+          {canChangeStatus && <CandidateEmailSection candidateId={candidate.id} status={candidate.status} />}
 
           {canChangeStatus && <StatusChangeSection candidate={candidate} onChanged={setCandidate} />}
         </div>

@@ -7,6 +7,7 @@ import {
   Briefcase,
   History,
   LayoutDashboard,
+  Mail,
   MenuIcon,
   UserCog,
   Users,
@@ -42,6 +43,13 @@ const NAV_ITEMS: NavItem[] = [
     // interview at all — previously only reachable via a direct link
     // someone else sent them (backend GET /candidates now allows it too).
     roles: ["admin", "recruiter", "hiring_manager", "interviewer"],
+    available: true,
+  },
+  {
+    label: "Template Email",
+    href: "/dashboard/settings/email-templates",
+    icon: Mail,
+    roles: ["admin", "recruiter"],
     available: true,
   },
   { label: "Log Aktivitas", href: "/dashboard/activity", icon: History, roles: ["admin"], available: true },
