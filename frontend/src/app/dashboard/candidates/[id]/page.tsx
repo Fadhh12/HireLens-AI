@@ -82,6 +82,91 @@ const STATUS_OPTIONS: CandidateStatus[] = [
 const POLL_INTERVAL_MS = 2500;
 const POLL_TIMEOUT_MS = 40000;
 
+// Parsed education/experience come back as a flat line-by-line array (see
+// backend document_ai/parser.py's _extract_list_section) — a title line,
+// its date range, then description lines, all as separate array entries.
+// Rendered as one flat <ul>, the date range reads as just another bullet
+// with equal weight to the job title, which looked "ngaco" to a user
+// report. Groups them back into {title, dateRange, bullets} here at
+// render time only — no backend/schema change, so editing (which still
+// works on the raw joined text) is untouched.
+interface TimelineEntry {
+  title: string;
+  dateRange: string | null;
+  bullets: string[];
+}
+
+const DATE_LINE_RE =
+  /^(?:[a-z]+\.?\s+)?(?:19|20)\d{2}\s*[-–—]\s*(?:(?:[a-z]+\.?\s+)?(?:19|20)\d{2}|present|sekarang|now|current)$/i;
+const MONTH_RANGE_SAME_YEAR_RE = /^[a-z]+\.?\s*[-–—]\s*[a-z]+\.?\s+(?:19|20)\d{2}$/i;
+const TRAILING_DASH_RE = /[-–—]\s*$/;
+
+function isDateLine(line: string): boolean {
+  const t = line.trim();
+  return DATE_LINE_RE.test(t) || MONTH_RANGE_SAME_YEAR_RE.test(t);
+}
+
+function groupTimelineEntries(lines: string[]): TimelineEntry[] {
+  // A line ending in a bare dash ("Sep 2025 –") with the end date wrapped
+  // to the next line is a real PDF-extraction artifact, not a typo —
+  // rejoin it before grouping so isDateLine sees the complete range.
+  const merged: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (TRAILING_DASH_RE.test(lines[i].trim()) && i + 1 < lines.length) {
+      merged.push(`${lines[i].trim()} ${lines[i + 1].trim()}`);
+      i++;
+    } else {
+      merged.push(lines[i]);
+    }
+  }
+
+  const entries: TimelineEntry[] = [];
+  let i = 0;
+  while (i < merged.length) {
+    const line = merged[i];
+    const next = merged[i + 1];
+    if (next && isDateLine(next)) {
+      const bullets: string[] = [];
+      let j = i + 2;
+      while (j < merged.length && !(merged[j + 1] && isDateLine(merged[j + 1]))) {
+        bullets.push(merged[j]);
+        j++;
+      }
+      entries.push({ title: line, dateRange: next.trim(), bullets });
+      i = j;
+    } else {
+      // No date line found right after this one — no structure to group,
+      // show it plainly rather than guessing.
+      entries.push({ title: line, dateRange: null, bullets: [] });
+      i++;
+    }
+  }
+  return entries;
+}
+
+function TimelineList({ lines }: { lines: string[] }) {
+  const entries = groupTimelineEntries(lines);
+  return (
+    <div className="divide-border space-y-3 divide-y">
+      {entries.map((entry, i) => (
+        <div key={i} className={i === 0 ? "space-y-1" : "space-y-1 pt-3"}>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+            <p className="text-sm font-medium">{entry.title}</p>
+            {entry.dateRange && <span className="caption shrink-0">{entry.dateRange}</span>}
+          </div>
+          {entry.bullets.length > 0 && (
+            <ul className="text-ink-600 list-disc space-y-0.5 pl-5 text-sm">
+              {entry.bullets.map((b, bi) => (
+                <li key={bi}>{b}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function CandidateDetailPage() {
   // UI/UX Flow §3 Screen 7: Recruiter, Hiring Manager, Interviewer all read this
   // page (hiring manager needs it for Flow E's final status decision, interviewer
@@ -229,7 +314,7 @@ function CandidateDetailContent() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
           {score?.score_breakdown.candidate_summary && (
-            <section className="space-y-2">
+            <section className="border-border bg-card space-y-2 rounded-lg border p-4">
               <div className="flex items-center gap-2">
                 <h2>Ringkasan</h2>
                 <Badge className="bg-secondary text-primary">✨ Dibantu AI</Badge>
@@ -410,7 +495,7 @@ function ParsedProfileSection({
   }
 
   return (
-    <section className="space-y-4">
+    <section className="border-border bg-card space-y-4 rounded-lg border p-4">
       <div className="flex items-center justify-between">
         <h2>Hasil Ekstraksi CV</h2>
         {canEdit && (
@@ -467,15 +552,10 @@ function ParsedProfileSection({
         </div>
         {editing ? (
           <Textarea rows={3} value={education} onChange={(e) => setEducation(e.target.value)} />
+        ) : (profile.education?.value ?? []).length === 0 ? (
+          <p className="caption">Tidak terdeteksi otomatis.</p>
         ) : (
-          <ul className="list-disc space-y-1 pl-5 text-sm">
-            {(profile.education?.value ?? []).length === 0 && (
-              <p className="caption">Tidak terdeteksi otomatis.</p>
-            )}
-            {(profile.education?.value ?? []).map((e, i) => (
-              <li key={i}>{e}</li>
-            ))}
-          </ul>
+          <TimelineList lines={profile.education!.value} />
         )}
       </div>
 
@@ -486,15 +566,10 @@ function ParsedProfileSection({
         </div>
         {editing ? (
           <Textarea rows={4} value={experience} onChange={(e) => setExperience(e.target.value)} />
+        ) : (profile.experience?.value ?? []).length === 0 ? (
+          <p className="caption">Tidak terdeteksi otomatis.</p>
         ) : (
-          <ul className="list-disc space-y-1 pl-5 text-sm">
-            {(profile.experience?.value ?? []).length === 0 && (
-              <p className="caption">Tidak terdeteksi otomatis.</p>
-            )}
-            {(profile.experience?.value ?? []).map((e, i) => (
-              <li key={i}>{e}</li>
-            ))}
-          </ul>
+          <TimelineList lines={profile.experience!.value} />
         )}
       </div>
 
