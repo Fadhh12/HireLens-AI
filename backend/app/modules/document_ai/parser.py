@@ -111,6 +111,14 @@ SECTION_HEADERS: dict[str, list[str]] = {
     ],
     "skills": ["keahlian", "keterampilan", "skill", "skills", "technical skills"],
     "certifications": ["sertifikasi", "sertifikat", "certifications", "certificates"],
+    # Not extracted as its own ParsedProfile field (nothing downstream
+    # consumes it yet) — listed purely as a section-boundary marker so a
+    # "Projects" block right after Certifications doesn't get silently
+    # absorbed into the certifications list (real bug: a CV with
+    # Certifications directly followed by an unrecognized "PROJECTS"
+    # header had every project bullet point merged into certifications,
+    # since _find_section only stops at a *known* header).
+    "projects": ["proyek", "project", "projects"],
 }
 
 SKILL_KEYWORDS = [
@@ -242,30 +250,87 @@ def _extract_list_section(section_text: str | None) -> Field:
     return Field(value=entries, verified=False)
 
 
+_MONTH_NUMBER = {
+    "jan": 1, "january": 1, "januari": 1,
+    "feb": 2, "february": 2, "februari": 2,
+    "mar": 3, "march": 3, "maret": 3,
+    "apr": 4, "april": 4,
+    "may": 5, "mei": 5,
+    "jun": 6, "june": 6, "juni": 6,
+    "jul": 7, "july": 7, "juli": 7,
+    "aug": 8, "august": 8, "agu": 8, "agustus": 8,
+    "sep": 9, "sept": 9, "september": 9,
+    "oct": 10, "october": 10, "okt": 10, "oktober": 10,
+    "nov": 11, "november": 11,
+    "dec": 12, "december": 12, "des": 12, "desember": 12,
+}
+_MONTH_ALT = "|".join(sorted(_MONTH_NUMBER, key=len, reverse=True))
+_PRESENT_WORDS = {"present", "sekarang", "now", "current"}
+
+# "Apr 2026 - Present", "2022-2025", "Jan 2020 - Dec 2021" — a year on
+# each side (month optional), most resume date ranges look like this.
 _YEAR_RANGE_RE = re.compile(
-    r"(19|20)\d{2}\s*[-–—]\s*((?:19|20)\d{2}|present|sekarang|now|current)", re.IGNORECASE
+    rf"(?:(?P<m1>{_MONTH_ALT})\s+)?(?P<y1>(?:19|20)\d{{2}})\s*[-–—]\s*"
+    rf"(?:(?P<m2>{_MONTH_ALT})\s+)?(?P<y2>(?:19|20)\d{{2}}|present|sekarang|now|current)",
+    re.IGNORECASE,
+)
+# "Jun - Aug 2026" — two month names sharing one trailing year, common for
+# short internships/bootcamps. Missed entirely by the pattern above (no
+# year appears next to the first month), which used to make these count
+# as zero experience — see parser docstring below.
+_MONTH_RANGE_SAME_YEAR_RE = re.compile(
+    rf"\b(?P<m1>{_MONTH_ALT})\s*[-–—]\s*(?P<m2>{_MONTH_ALT})\s+(?P<y>(?:19|20)\d{{2}})\b",
+    re.IGNORECASE,
 )
 
 
-def _estimate_experience_years(experience_section_text: str | None, current_year: int | None = None) -> Field:
-    """Sums the span of every "YYYY-YYYY" / "YYYY-Present" style range found
-    in the experience section (Matching Engine's Experience Fit needs a
-    number, and nothing upstream produces one). Heuristic, not exact:
-    overlapping roles double-count, and a CV that doesn't spell out years
-    in this shape yields 0 — always `verified: false`, recruiter can
-    override on the candidate detail page."""
+def _month_index(name: str | None) -> int:
+    """0-based month (Jan=0) — matches datetime's month-1, so `year*12 +
+    month_index` gives a monotonic "months since year 0" count that a
+    plain subtraction turns into a duration."""
+    return (_MONTH_NUMBER[name.lower()] - 1) if name else 0
+
+
+def _estimate_experience_years(experience_section_text: str | None, current_year: int | None = None, current_month: int | None = None) -> Field:
+    """Sums every date range found in the experience section (Matching
+    Engine's Experience Fit needs a number, and nothing upstream produces
+    one). Two shapes are recognized: "YYYY-YYYY"/"Mon YYYY-Present" (a
+    year on each side) and "Mon-Mon YYYY" (two months, one shared year —
+    e.g. a 3-month internship written as "Jun-Aug 2026"). The second
+    shape used to be silently dropped entirely (the old regex required a
+    4-digit year immediately before the dash), which meant every
+    internship/bootcamp-style entry contributed zero months — for a CV
+    built mostly of short stints, that undercounts real experience by
+    most of a year. Still heuristic, not exact: overlapping roles
+    double-count, and a CV phrasing dates some other way yields 0 —
+    always `verified: false`, recruiter can override on the candidate
+    detail page."""
     if not experience_section_text:
         return Field(value=0.0, verified=False)
 
-    year = current_year or datetime.now(timezone.utc).year
-    total = 0.0
+    now = datetime.now(timezone.utc)
+    year = current_year or now.year
+    month = current_month or now.month
+    present_index = year * 12 + (month - 1)
+
+    total_months = 0.0
+    consumed: list[tuple[int, int]] = []  # (start, end) char spans already counted
+
     for match in _YEAR_RANGE_RE.finditer(experience_section_text):
-        start = int(match.group(0)[:4])
-        end_raw = match.group(2).lower()
-        end = year if end_raw in {"present", "sekarang", "now", "current"} else int(end_raw)
-        if end >= start:
-            total += end - start
-    return Field(value=round(total, 1), verified=False)
+        y1, y2_raw = int(match.group("y1")), match.group("y2").lower()
+        start_idx = y1 * 12 + _month_index(match.group("m1"))
+        end_idx = present_index if y2_raw in _PRESENT_WORDS else int(y2_raw) * 12 + _month_index(match.group("m2"))
+        if end_idx >= start_idx:
+            total_months += end_idx - start_idx
+            consumed.append(match.span())
+
+    for match in _MONTH_RANGE_SAME_YEAR_RE.finditer(experience_section_text):
+        if any(a <= match.start() < b for a, b in consumed):
+            continue  # already counted by the pattern above — don't double up
+        m1, m2 = _month_index(match.group("m1")), _month_index(match.group("m2"))
+        total_months += (m2 - m1 + 1) if m2 >= m1 else (m1 - m2 + 1)
+
+    return Field(value=round(total_months / 12, 1), verified=False)
 
 
 def parse_resume(content: bytes, filename: str) -> ParsedProfile:

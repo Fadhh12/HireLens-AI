@@ -15,6 +15,7 @@ from docx import Document
 from app.modules.document_ai.parser import (
     TextExtractionFailedError,
     UnsupportedFileTypeError,
+    _estimate_experience_years,
     parse_resume,
 )
 
@@ -94,3 +95,44 @@ def test_extract_text_corrupt_pdf_raises_text_extraction_failed() -> None:
 def test_extract_text_unsupported_type_raises() -> None:
     with pytest.raises(UnsupportedFileTypeError):
         parse_resume(b"hello", "resume.txt")
+
+
+def test_estimate_experience_years_plain_year_range_unchanged() -> None:
+    # The original supported shape — must keep working exactly as before.
+    result = _estimate_experience_years("Backend Engineer (2022-2025)", current_year=2026)
+    assert result.value == 3.0
+
+
+def test_estimate_experience_years_counts_month_to_month_same_year_ranges() -> None:
+    # Real bug: "Jun-Aug 2026" (no year next to the first month) used to
+    # match nothing at all and silently contribute zero — undercounting
+    # every internship/bootcamp-style entry a CV lists this way.
+    result = _estimate_experience_years("AI Bootcamp\nJun - Aug 2026", current_year=2026, current_month=9)
+    assert result.value == 0.2  # 3/12 months, rounded to 1 decimal like the rest of this function
+
+
+def test_estimate_experience_years_counts_month_present_ranges() -> None:
+    # "Mon YYYY - Present" should count the partial year already elapsed,
+    # not just whole calendar years.
+    result = _estimate_experience_years("Ambassador\nApr 2026 - Present", current_year=2026, current_month=9)
+    assert result.value == 0.4  # 5/12 months elapsed, rounded to 1 decimal
+
+
+def test_estimate_experience_years_does_not_double_count_overlapping_matches() -> None:
+    # "Sep 2025 - Present" matches the year-range pattern; it must not
+    # also get picked up by the month-range pattern.
+    result = _estimate_experience_years("Role\nSep 2025 - Present", current_year=2026, current_month=9)
+    assert result.value == 1.0
+
+
+def test_find_section_projects_header_stops_certifications_bleed() -> None:
+    # Real bug: an unrecognized "PROJECTS" header let _find_section's
+    # certifications block run past it and swallow every project bullet.
+    text = (
+        "Sertifikasi\nAWS Certified Developer\n\n"
+        "PROJECTS\nBuilt a hotel reservation system\nBuilt a waste detection model"
+    )
+    profile = parse_resume(_make_pdf_bytes(text), "cv.pdf")
+    certs = profile.to_dict()["certifications"]["value"]
+    assert certs == ["AWS Certified Developer"]
+    assert not any("hotel reservation" in c.lower() for c in certs)
