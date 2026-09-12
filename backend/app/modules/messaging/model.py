@@ -35,6 +35,10 @@ class EmailTrigger(str, enum.Enum):
     shortlisted = "shortlisted"
     rejected = "rejected"
     hired = "hired"
+    # Sent by scheduling/service.py's schedule_interview, not
+    # candidates/service.py's update_status like the other three —
+    # scheduling an interview isn't itself a candidate status transition.
+    interview = "interview"
 
 
 class EmailTemplate(Base):

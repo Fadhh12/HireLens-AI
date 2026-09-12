@@ -1,12 +1,12 @@
-"""Template rendering, sending status-change emails, and polling for
-candidate replies.
+"""Template rendering, sending status-change + interview-invite emails,
+and polling for candidate replies.
 
-Trigger is deliberately narrower than CandidateStatus: only shortlisted/
-rejected/hired send an email from here. "interviewed" already gets its
-own notification — the Google Calendar invite from scheduling/service.py
-— sending a second, different email for the same transition would be
-confusing, not helpful (this exact trade-off was confirmed with the
-user rather than assumed).
+Three triggers (shortlisted/rejected/hired) fire from candidates/service.py's
+update_status. The fourth (interview) fires from scheduling/service.py's
+schedule_interview instead — it's not a status transition, it's "an
+interview got put on the calendar", which can happen more than once for
+the same candidate (reschedule) and doesn't map to any CandidateStatus
+value change by itself.
 """
 
 import logging
@@ -63,11 +63,22 @@ DEFAULT_TEMPLATES: dict[EmailTrigger, tuple[str, str]] = {
         "termasuk dokumen administrasi.\n\n"
         "Selamat bergabung, dan sampai jumpa!\n\nSalam,\nTim Rekrutmen",
     ),
+    EmailTrigger.interview: (
+        "Undangan Interview — Posisi {{job_title}}",
+        "Halo {{full_name}},\n\n"
+        "Selamat! Kami ingin mengundang Anda untuk mengikuti wawancara untuk posisi "
+        "{{job_title}} di {{department}}.\n\n"
+        "Jadwal: {{scheduled_at}} ({{duration_minutes}} menit)\n"
+        "Link Google Meet: {{meet_link}}\n\n"
+        "Mohon bergabung 5 menit sebelum waktu yang ditentukan. Jika ada kendala jadwal, "
+        "balas email ini untuk mengatur ulang waktu.\n\n"
+        "Sampai jumpa di sesi wawancara!\n\nSalam,\nTim Rekrutmen",
+    ),
 }
 
 
-def _placeholders(candidate: Candidate, job_title: str, department: str) -> dict[str, str]:
-    return {"full_name": candidate.full_name, "job_title": job_title, "department": department}
+def _placeholders(candidate: Candidate, job_title: str, department: str, **extra: str) -> dict[str, str]:
+    return {"full_name": candidate.full_name, "job_title": job_title, "department": department, **extra}
 
 
 def _render(text: str, values: dict[str, str]) -> str:
@@ -107,6 +118,7 @@ def _send(
     trigger: EmailTrigger,
     actor_id: uuid.UUID,
     attachment: tuple[str, str, bytes] | None,
+    extra_placeholders: dict[str, str] | None = None,
 ) -> CandidateEmail:
     if not candidate.email:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Kandidat tidak punya alamat email")
@@ -120,7 +132,7 @@ def _send(
 
     job = get_job(db, candidate.job_posting_id)
     template = get_or_create_template(db, trigger)
-    values = _placeholders(candidate, job.title, job.department)
+    values = _placeholders(candidate, job.title, job.department, **(extra_placeholders or {}))
     subject = _render(template.subject, values)
     body = _render(template.body, values)
 
@@ -185,6 +197,50 @@ def send_status_email_best_effort(db: Session, candidate: Candidate, trigger: Em
         logger.info("Auto status-email skipped for candidate %s: %s", candidate.id, exc.detail)
     except Exception:  # noqa: BLE001 - must never break the status change itself
         logger.exception("Auto status-email failed unexpectedly for candidate %s", candidate.id)
+
+
+_INDO_MONTHS = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+]
+
+
+def _format_indo_datetime(dt: datetime) -> str:
+    """No reliance on the OS having an id_ID locale installed (unreliable
+    across hosts) — just spell it out."""
+    return f"{dt.day} {_INDO_MONTHS[dt.month - 1]} {dt.year}, {dt.strftime('%H:%M')} WIB"
+
+
+def send_interview_email(
+    db: Session,
+    candidate: Candidate,
+    actor_id: uuid.UUID,
+    scheduled_at: datetime,
+    duration_minutes: int,
+    meet_link: str,
+) -> None:
+    """Called from scheduling/service.py's schedule_interview — best-effort
+    like the status-change emails, since a failure here shouldn't undo an
+    interview that's already on the calendar (the Meet link/event still
+    exists either way; HR can resend via the explicit action if this
+    silently didn't go out)."""
+    try:
+        _send(
+            db,
+            candidate,
+            EmailTrigger.interview,
+            actor_id,
+            attachment=None,
+            extra_placeholders={
+                "scheduled_at": _format_indo_datetime(scheduled_at),
+                "duration_minutes": str(duration_minutes),
+                "meet_link": meet_link,
+            },
+        )
+    except HTTPException as exc:
+        logger.info("Interview-invite email skipped for candidate %s: %s", candidate.id, exc.detail)
+    except Exception:  # noqa: BLE001 - must never break the scheduling itself
+        logger.exception("Interview-invite email failed unexpectedly for candidate %s", candidate.id)
 
 
 def list_candidate_emails(db: Session, candidate_id: uuid.UUID) -> list[CandidateEmail]:

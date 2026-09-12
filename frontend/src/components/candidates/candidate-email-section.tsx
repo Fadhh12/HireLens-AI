@@ -14,6 +14,7 @@ const TRIGGER_LABEL: Record<EmailTrigger, string> = {
   shortlisted: "Shortlisted",
   rejected: "Rejected",
   hired: "Hired",
+  interview: "Undangan Interview",
 };
 
 const RESENDABLE: EmailTrigger[] = ["shortlisted", "rejected", "hired"];

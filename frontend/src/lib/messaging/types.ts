@@ -1,6 +1,6 @@
 // Mirrors backend/app/modules/messaging/schema.py + model.py.
 
-export type EmailTrigger = "shortlisted" | "rejected" | "hired";
+export type EmailTrigger = "shortlisted" | "rejected" | "hired" | "interview";
 
 export interface EmailTemplate {
   trigger: EmailTrigger;

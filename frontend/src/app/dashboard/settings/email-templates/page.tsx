@@ -17,9 +17,10 @@ const TRIGGER_LABEL: Record<EmailTrigger, string> = {
   shortlisted: "Shortlisted",
   rejected: "Rejected",
   hired: "Hired",
+  interview: "Undangan Interview",
 };
 
-const TRIGGER_ORDER: EmailTrigger[] = ["shortlisted", "rejected", "hired"];
+const TRIGGER_ORDER: EmailTrigger[] = ["shortlisted", "rejected", "hired", "interview"];
 
 export default function EmailTemplatesPage() {
   // Same scope as job scoring weights — HR configuration, admin/recruiter only.
@@ -46,12 +47,13 @@ function EmailTemplatesContent() {
   return (
     <div className="max-w-3xl space-y-6">
       <BackButton fallbackHref="/dashboard" />
-      <div>
+      <div className="space-y-1">
         <h1>Template Email</h1>
         <p className="caption">
-          Email ini terkirim otomatis lewat Gmail (akun Google yang Anda hubungkan) saat status kandidat
-          diubah ke Shortlisted, Rejected, atau Hired. Gunakan {"{{full_name}}"}, {"{{job_title}}"}, dan{" "}
-          {"{{department}}"} — otomatis terisi sesuai kandidat & job yang dilamar.
+          Shortlisted/Rejected/Hired terkirim otomatis lewat Gmail saat status kandidat diubah. Undangan
+          Interview terkirim otomatis saat interview dijadwalkan (menggantikan undangan Calendar bawaan).
+          Placeholder yang tersedia: {"{{full_name}}"}, {"{{job_title}}"}, {"{{department}}"} (semua template),
+          dan khusus Undangan Interview: {"{{scheduled_at}}"}, {"{{duration_minutes}}"}, {"{{meet_link}}"}.
         </p>
       </div>
 

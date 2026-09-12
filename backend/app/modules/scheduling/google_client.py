@@ -161,11 +161,15 @@ def create_interview_event(
     start: datetime,
     end: datetime,
     attendee_emails: list[str],
+    send_updates: str = "none",
 ) -> CreatedEvent:
     """Creates a Calendar event with an auto-generated Google Meet link and
-    invites `attendee_emails` — Calendar sends its own invite email to each
-    attendee (sendUpdates="all"), which is the "auto pesan ke Gmail mereka"
-    behavior; no separate Gmail API send needed."""
+    adds `attendee_emails`. `send_updates` defaults to "none" — the
+    interview trigger's own templated Gmail send (messaging/service.py,
+    with the Meet link filled into {{meet_link}}) is what notifies the
+    candidate now, so Calendar's own bare invite email would just be a
+    redundant, differently-worded second message. Pass "all" to fall
+    back to Calendar's own invite email instead."""
     _require_configured()
     creds = _credentials_from_refresh_token(refresh_token)
     service = build("calendar", "v3", credentials=creds, cache_discovery=False)
@@ -188,7 +192,7 @@ def create_interview_event(
     try:
         event = (
             service.events()
-            .insert(calendarId="primary", body=body, conferenceDataVersion=1, sendUpdates="all")
+            .insert(calendarId="primary", body=body, conferenceDataVersion=1, sendUpdates=send_updates)
             .execute()
         )
     except HttpError as exc:

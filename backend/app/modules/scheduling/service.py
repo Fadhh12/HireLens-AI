@@ -4,10 +4,11 @@ Flow: a recruiter connects their own Google account once (OAuth,
 per-user — see google_client.py's docstring on why not a shared
 service account). After that, scheduling an interview for a
 shortlisted+ candidate creates a Calendar event with a Google Meet
-link under that recruiter's calendar and invites the candidate's
-email — Calendar's own invite email covers the "auto pesan ke Gmail
-kandidat" requirement, no separate email send needed.
-"""
+link under that recruiter's calendar, adds the candidate as an
+attendee (without Calendar's own auto-invite email — see
+google_client.create_interview_event's send_updates default), and
+sends the candidate a templated Gmail invite with the Meet link
+(messaging/service.py's "interview" trigger) instead."""
 
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -166,6 +167,21 @@ def schedule_interview(
         action="interview_scheduled",
         candidate_id=candidate_id,
         new_value=data.scheduled_at.isoformat(),
+    )
+
+    # Local import — avoids a module-load-order cycle (messaging imports
+    # scheduling.google_client/model). Best-effort: the interview is
+    # already on the calendar either way; a failed notification email
+    # shouldn't undo that.
+    from app.modules.messaging.service import send_interview_email
+
+    send_interview_email(
+        db,
+        candidate,
+        actor_id=actor_id,
+        scheduled_at=data.scheduled_at,
+        duration_minutes=data.duration_minutes,
+        meet_link=schedule.meet_link,
     )
     return schedule
 
