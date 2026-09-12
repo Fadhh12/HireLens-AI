@@ -1,8 +1,10 @@
 "use client";
 
+import { Briefcase, CalendarClock, TrendingUp, UserPlus, Video } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { CandidateAvatar } from "@/components/candidates/candidate-avatar";
 import { MATCH_LABEL_TEXT } from "@/components/candidates/match-label-badge";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { listAllCandidates, listCandidates } from "@/lib/candidates/api";
@@ -10,6 +12,8 @@ import type { MatchLabel } from "@/lib/candidates/types";
 import { useAuthStore } from "@/lib/auth/store";
 import { listJobs } from "@/lib/jobs/api";
 import type { JobPosting } from "@/lib/jobs/types";
+import { listUpcomingInterviews } from "@/lib/scheduling/api";
+import type { UpcomingInterview } from "@/lib/scheduling/types";
 
 const LABEL_BAR_CLASS: Record<MatchLabel, string> = {
   strong_match: "bg-success-700",
@@ -38,6 +42,7 @@ export default function DashboardOverviewPage() {
   const [newThisWeek, setNewThisWeek] = useState(0);
   const [loading, setLoading] = useState(true);
   const [toInterviewCount, setToInterviewCount] = useState(0);
+  const [upcomingInterviews, setUpcomingInterviews] = useState<UpcomingInterview[]>([]);
 
   // UI/UX Flow §3 Screen 2: Admin, Recruiter, Hiring Manager (Task 6.3 finding —
   // hiring_manager was missing, leaving them with a blank overview and no way to
@@ -71,6 +76,13 @@ export default function DashboardOverviewPage() {
         setNewThisWeek(recentCount);
       })
       .finally(() => setLoading(false));
+  }, [canSeeJobs]);
+
+  useEffect(() => {
+    if (!canSeeJobs) return;
+    listUpcomingInterviews(20)
+      .then(setUpcomingInterviews)
+      .catch(() => setUpcomingInterviews([]));
   }, [canSeeJobs]);
 
   useEffect(() => {
@@ -115,10 +127,11 @@ export default function DashboardOverviewPage() {
 
       {canSeeJobs && !loading && (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <MetricCard label="Job Aktif" value={jobs.length} />
-            <MetricCard label="Kandidat Baru (7 hari)" value={newThisWeek} />
-            <MetricCard label="Total Kandidat Ternilai" value={totalLabeled} />
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <MetricCard icon={Briefcase} label="Job Aktif" value={jobs.length} />
+            <MetricCard icon={UserPlus} label="Kandidat Baru (7 hari)" value={newThisWeek} />
+            <MetricCard icon={TrendingUp} label="Total Kandidat Ternilai" value={totalLabeled} />
+            <MetricCard icon={CalendarClock} label="Interview Terjadwal" value={upcomingInterviews.length} />
           </div>
 
           {totalLabeled > 0 && (
@@ -159,42 +172,88 @@ export default function DashboardOverviewPage() {
             </section>
           )}
 
-          <section className="space-y-2">
-            <h2>Job Aktif</h2>
-            <div className="border-border bg-card divide-border divide-y rounded-lg border">
-              {jobs.length === 0 && <p className="text-ink-400 p-4 text-sm">Belum ada job aktif.</p>}
-              {jobs.map((job) => {
-                const maxCount = Math.max(...jobs.map((j) => j.candidateCount), 1);
-                return (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <section className="space-y-2">
+              <h2>Job Aktif</h2>
+              <div className="border-border bg-card divide-border divide-y rounded-lg border">
+                {jobs.length === 0 && <p className="text-ink-400 p-4 text-sm">Belum ada job aktif.</p>}
+                {jobs.map((job) => {
+                  const maxCount = Math.max(...jobs.map((j) => j.candidateCount), 1);
+                  return (
+                    <Link
+                      key={job.id}
+                      href={`/dashboard/jobs/${job.id}/candidates`}
+                      className="hover:bg-accent flex items-center gap-4 p-4 text-sm"
+                    >
+                      <span className="min-w-0 flex-1 truncate font-medium">{job.title}</span>
+                      <div className="bg-muted hidden h-1.5 w-28 shrink-0 overflow-hidden rounded-full sm:block">
+                        <div
+                          className="bg-primary h-full"
+                          style={{ width: `${(job.candidateCount / maxCount) * 100}%` }}
+                        />
+                      </div>
+                      <span className="caption w-20 shrink-0 text-right">{job.candidateCount} kandidat</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="space-y-2">
+              <h2>Interview Mendatang</h2>
+              <div className="border-border bg-card divide-border divide-y rounded-lg border">
+                {upcomingInterviews.length === 0 && (
+                  <p className="text-ink-400 p-4 text-sm">Belum ada interview terjadwal.</p>
+                )}
+                {upcomingInterviews.slice(0, 5).map((iv) => (
                   <Link
-                    key={job.id}
-                    href={`/dashboard/jobs/${job.id}/candidates`}
-                    className="hover:bg-accent flex items-center gap-4 p-4 text-sm"
+                    key={iv.id}
+                    href={`/dashboard/candidates/${iv.candidate_id}`}
+                    className="hover:bg-accent flex items-center gap-3 p-4 text-sm"
                   >
-                    <span className="min-w-0 flex-1 truncate font-medium">{job.title}</span>
-                    <div className="bg-muted hidden h-1.5 w-28 shrink-0 overflow-hidden rounded-full sm:block">
-                      <div
-                        className="bg-primary h-full"
-                        style={{ width: `${(job.candidateCount / maxCount) * 100}%` }}
-                      />
+                    <CandidateAvatar name={iv.candidate_name} photoUrl={iv.candidate_photo_url} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{iv.candidate_name}</p>
+                      <p className="caption truncate">{iv.job_title}</p>
                     </div>
-                    <span className="caption w-20 shrink-0 text-right">{job.candidateCount} kandidat</span>
+                    <div className="shrink-0 text-right">
+                      <p className="text-ink-600">
+                        {new Date(iv.scheduled_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                      </p>
+                      <p className="caption">
+                        {new Date(iv.scheduled_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                    <Video className="text-primary size-4 shrink-0" strokeWidth={1.75} />
                   </Link>
-                );
-              })}
-            </div>
-          </section>
+                ))}
+              </div>
+            </section>
+          </div>
         </>
       )}
     </div>
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: number }) {
+function MetricCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Briefcase;
+  label: string;
+  value: number;
+}) {
   return (
-    <div className="border-border bg-card rounded-lg border p-4">
-      <p className="caption">{label}</p>
-      <p className="tabular-score text-2xl">{value}</p>
+    <div className="border-border bg-card flex items-start gap-3 rounded-lg border p-4">
+      <span className="bg-secondary text-primary flex size-9 shrink-0 items-center justify-center rounded-lg">
+        <Icon className="size-4.5" strokeWidth={1.75} />
+      </span>
+      <div className="min-w-0">
+        <p className="caption truncate">{label}</p>
+        <p className="tabular-score text-2xl">{value}</p>
+      </div>
     </div>
   );
 }

@@ -21,3 +21,14 @@ export interface InterviewSchedule {
   calendar_html_link: string | null;
   created_at: string;
 }
+
+export interface UpcomingInterview {
+  id: string;
+  candidate_id: string;
+  candidate_name: string;
+  candidate_photo_url: string | null;
+  job_title: string;
+  scheduled_at: string;
+  duration_minutes: number;
+  meet_link: string;
+}

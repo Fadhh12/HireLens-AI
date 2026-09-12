@@ -28,4 +28,19 @@ class InterviewScheduleOut(BaseModel):
     duration_minutes: int
     meet_link: str
     calendar_html_link: str | None
+
+
+class UpcomingInterviewOut(BaseModel):
+    """Dashboard overview widget — InterviewSchedule joined with the
+    candidate/job names it doesn't itself carry (denormalized read model,
+    same reasoning as CandidateListItemOut)."""
+
+    id: uuid.UUID
+    candidate_id: uuid.UUID
+    candidate_name: str
+    candidate_photo_url: str | None
+    job_title: str
+    scheduled_at: datetime
+    duration_minutes: int
+    meet_link: str
     created_at: datetime

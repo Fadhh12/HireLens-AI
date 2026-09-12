@@ -193,3 +193,34 @@ def list_schedules(db: Session, candidate_id: uuid.UUID) -> list[InterviewSchedu
         .order_by(InterviewSchedule.scheduled_at.desc())
         .all()
     )
+
+
+def list_upcoming_interviews(db: Session, limit: int = 5) -> list["UpcomingInterviewOut"]:
+    """Dashboard overview widget — every interview still ahead of now,
+    across all candidates/jobs, soonest first."""
+    from app.modules.candidates.model import Candidate
+    from app.modules.jobs.model import JobPosting
+    from app.modules.scheduling.schema import UpcomingInterviewOut
+
+    rows = (
+        db.query(InterviewSchedule, Candidate, JobPosting)
+        .join(Candidate, Candidate.id == InterviewSchedule.candidate_id)
+        .join(JobPosting, JobPosting.id == Candidate.job_posting_id)
+        .filter(InterviewSchedule.scheduled_at >= datetime.now(timezone.utc))
+        .order_by(InterviewSchedule.scheduled_at.asc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        UpcomingInterviewOut(
+            id=schedule.id,
+            candidate_id=candidate.id,
+            candidate_name=candidate.full_name,
+            candidate_photo_url=candidate.photo_url,
+            job_title=job.title,
+            scheduled_at=schedule.scheduled_at,
+            duration_minutes=schedule.duration_minutes,
+            meet_link=schedule.meet_link,
+        )
+        for schedule, candidate, job in rows
+    ]

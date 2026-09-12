@@ -18,6 +18,7 @@ from app.modules.scheduling.schema import (
     GoogleConnectionStatus,
     InterviewScheduleCreate,
     InterviewScheduleOut,
+    UpcomingInterviewOut,
 )
 
 router = APIRouter(tags=["scheduling"])
@@ -107,3 +108,14 @@ def list_interview_schedules(
     db: Session = Depends(get_db),
 ) -> list[InterviewSchedule]:
     return service.list_schedules(db, candidate_id)
+
+
+@router.get("/interview-schedules/upcoming", response_model=list[UpcomingInterviewOut])
+def list_upcoming_interviews(
+    limit: int = Query(default=5, ge=1, le=20),
+    _: User = Depends(require_role("admin", "recruiter", "hiring_manager")),
+    db: Session = Depends(get_db),
+) -> list[UpcomingInterviewOut]:
+    """Dashboard overview widget — same role scope as the Job Aktif
+    section it sits next to."""
+    return service.list_upcoming_interviews(db, limit)

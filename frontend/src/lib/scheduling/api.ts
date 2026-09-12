@@ -1,6 +1,6 @@
 import { apiFetch } from "@/lib/api/client";
 
-import type { GoogleConnectionStatus, InterviewSchedule, InterviewScheduleInput } from "./types";
+import type { GoogleConnectionStatus, InterviewSchedule, InterviewScheduleInput, UpcomingInterview } from "./types";
 
 export function getGoogleConnectionStatus(): Promise<GoogleConnectionStatus> {
   return apiFetch<GoogleConnectionStatus>("/integrations/google/status");
@@ -27,4 +27,8 @@ export function scheduleInterview(candidateId: string, input: InterviewScheduleI
 
 export function listInterviewSchedules(candidateId: string): Promise<InterviewSchedule[]> {
   return apiFetch<InterviewSchedule[]>(`/candidates/${candidateId}/interview-schedule`);
+}
+
+export function listUpcomingInterviews(limit = 5): Promise<UpcomingInterview[]> {
+  return apiFetch<UpcomingInterview[]>(`/interview-schedules/upcoming?limit=${limit}`);
 }
